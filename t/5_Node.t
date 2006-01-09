@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 92;
+use Test::More tests => 95;
 use Test::Exception;
 use Data::Dumper;
 
@@ -12,12 +12,13 @@ BEGIN { use_ok('Search::Estraier') };
 my $debug = 0;
 
 # name of node for test
-my $test_node = 'Search-Estraier';
+my $test_node = 'test1';
+my $test1_node = 'test2';
 
 ok(my $node = new Search::Estraier::Node( debug => $debug ), 'new');
 isa_ok($node, 'Search::Estraier::Node');
 
-ok($node->set_url('http://localhost:1978/node/searchestraier'), 'set_url');
+ok($node->set_url("http://localhost:1978/node/$test_node"), "set_url $test_node");
 
 ok($node->set_proxy('', 8080), 'set_proxy');
 throws_ok {$node->set_proxy('proxy.example.com', 'foo') } qr/port/, 'set_proxy port NaN';
@@ -28,6 +29,10 @@ throws_ok {$node->set_timeout('foo') } qr/timeout/, 'set_timeout NaN';
 ok($node->set_auth('admin','admin'), 'set_auth');
 
 cmp_ok($node->status, '==', -1, 'status');
+
+SKIP: {
+
+skip "no $test_node node in Hyper Estraier", 85, unless($node->name);
 
 my @res = ( -1, 200 );
 
@@ -104,6 +109,8 @@ for ( 6 .. 10 ) {
 	ok( eq_hash( $k, $k2 ), "keywords");
 }
 
+ok($node->_set_info, "refresh _set_info");
+
 my $v;
 ok($v = $node->name, "name: $v");
 ok($v = $node->label, "label: $v");
@@ -116,7 +123,16 @@ ok($node->set_snippet_width( 100, 10, 10 ), "set_snippet_width");
 # user doesn't exist
 ok(! $node->set_user('foobar', 1), 'set_user');
 
-ok($node->set_link('test','test', 42), 'set_link test 42');
-ok($node->set_link('test','test', 0), 'set_link delete');
+ok(my $node1 = new Search::Estraier::Node( "http://localhost:1978/node/$test1_node" ), "new $test1_node");
+ok($node1->set_auth('admin','admin'), "set_auth $test1_node");
+
+SKIP: {
+	skip "no $test1_node in Hyper Estraier, skipping set_link", 2 unless (my $test1_label = $node1->label);
+
+	ok($node->set_link("http://localhost:1978/node/$test1_node", $test1_label, 42), "set_link $test1_node ($test1_label) 42");
+	ok($node->set_link("http://localhost:1978/node/$test1_node", $test1_label, 0), "set_link $test1_node ($test1_label) delete");
+}	# SKIP 2
+
+}	# SKIP 1
 
 diag "over";

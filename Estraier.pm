@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.03_1';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -1535,7 +1535,7 @@ sub set_link {
 	$reqbody .= '&credit=' . $credit if ($credit > 0);
 
 	$self->shuttle_url( $self->{url} . '/_set_link',
-		'text/plain',
+		'application/x-www-form-urlencoded',
 		$reqbody,
 		undef
 	) == 200;
