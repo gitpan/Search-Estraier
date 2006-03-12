@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 95;
+use Test::More tests => 106;
 use Test::Exception;
 use Data::Dumper;
 
@@ -12,13 +12,13 @@ BEGIN { use_ok('Search::Estraier') };
 my $debug = 0;
 
 # name of node for test
-my $test_node = 'test1';
-my $test1_node = 'test2';
+my $test1_node = 'test1';
+my $test2_node = 'test2';
 
 ok(my $node = new Search::Estraier::Node( debug => $debug ), 'new');
 isa_ok($node, 'Search::Estraier::Node');
 
-ok($node->set_url("http://localhost:1978/node/$test_node"), "set_url $test_node");
+ok($node->set_url("http://localhost:1978/node/$test1_node"), "set_url $test1_node");
 
 ok($node->set_proxy('', 8080), 'set_proxy');
 throws_ok {$node->set_proxy('proxy.example.com', 'foo') } qr/port/, 'set_proxy port NaN';
@@ -32,7 +32,7 @@ cmp_ok($node->status, '==', -1, 'status');
 
 SKIP: {
 
-skip "no $test_node node in Hyper Estraier", 85, unless($node->name);
+skip "no $test1_node node in Hyper Estraier", 96, unless($node->name);
 
 my @res = ( -1, 200 );
 
@@ -67,7 +67,9 @@ for ( 1 .. 10 ) {
 my $id;
 ok($id = $node->uri_to_id( 'data001' ), "uri_to_id = $id");
 
-for ( 1 .. 5 ) {
+my $data_max = 5;
+
+for ( 1 .. $data_max ) {
 	ok( $node->out_doc_by_uri( 'test' . $_ ), "out_doc_by_uri test$_");
 }
 
@@ -90,15 +92,17 @@ ok($cond->add_attr('@title STRINC Material'), 'cond add_attr');
 
 cmp_ok($node->cond_to_query( $cond ), 'eq' , 'phrase=girl&attr1=%40title%20STRINC%20Material&order=%40uri%20ASCD&max='.$max.'&wwidth=480&hwidth=96&awidth=96', 'cond_to_query');
 
-ok( my $nrec = $node->search( $cond, 0 ), 'search');
+ok( my $nres = $node->search( $cond, 0 ), 'search');
 
-isa_ok( $nrec, 'Search::Estraier::NodeResult' );
+isa_ok( $nres, 'Search::Estraier::NodeResult' );
 
-cmp_ok($nrec->doc_num, '==', $max, "doc_num = $max");
+cmp_ok($nres->doc_num, '==', $max, "doc_num = $max");
+
+cmp_ok($nres->hits, '==', $data_max, "hits");
 
 for ( 6 .. 10 ) {
 	my $uri = 'test' . $_;
-	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id $uri");
+	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id($uri) = $id");
 	ok( $node->get_doc( $id ), "get_doc $id");
 	ok( $node->get_doc_by_uri( $uri ), "get_doc_by_uri $uri");
 	cmp_ok( $node->get_doc_attr( $id, '@uri' ), 'eq', $uri, "get_doc_attr $id");
@@ -109,13 +113,16 @@ for ( 6 .. 10 ) {
 	ok( eq_hash( $k, $k2 ), "keywords");
 }
 
+ok(my $hints = $nres->hints, 'hints');
+diag Dumper($hints);
+
 ok($node->_set_info, "refresh _set_info");
 
 my $v;
 ok($v = $node->name, "name: $v");
 ok($v = $node->label, "label: $v");
 ok($v = $node->doc_num, "doc_num: $v");
-ok($v = $node->word_num, "word_num: $v");
+ok(defined($v = $node->word_num), "word_num: $v");
 ok($v = $node->size, "size: $v");
 
 ok($node->set_snippet_width( 100, 10, 10 ), "set_snippet_width");
@@ -123,14 +130,38 @@ ok($node->set_snippet_width( 100, 10, 10 ), "set_snippet_width");
 # user doesn't exist
 ok(! $node->set_user('foobar', 1), 'set_user');
 
-ok(my $node1 = new Search::Estraier::Node( "http://localhost:1978/node/$test1_node" ), "new $test1_node");
-ok($node1->set_auth('admin','admin'), "set_auth $test1_node");
+ok(my $node2 = new Search::Estraier::Node( "http://localhost:1978/node/$test2_node" ), "new $test2_node");
+ok($node2->set_auth('admin','admin'), "set_auth $test2_node");
+
+# croak_on_error
+
+ok($node = new Search::Estraier::Node( url => "http://localhost:1978/non-existant", croak_on_error => 1 ), "new non-existant");
+throws_ok { $node->name } qr/404/, 'croak on error';
+
+# croak_on_error
+ok($node = new Search::Estraier::Node( url => "http://localhost:1978/node/$test1_node", croak_on_error => 1 ), "new $test1_node");
+
+ok(! $node->uri_to_id('foobar'), 'uri_to_id without croak');
+
+# test users
+
+ok(! $node->admins, 'no admins');
+ok(! $node->guests, 'no guests');
 
 SKIP: {
-	skip "no $test1_node in Hyper Estraier, skipping set_link", 2 unless (my $test1_label = $node1->label);
+	skip "no $test2_node in Hyper Estraier, skipping set_link", 5 unless (my $test2_label = $node2->label);
 
-	ok($node->set_link("http://localhost:1978/node/$test1_node", $test1_label, 42), "set_link $test1_node ($test1_label) 42");
-	ok($node->set_link("http://localhost:1978/node/$test1_node", $test1_label, 0), "set_link $test1_node ($test1_label) delete");
+	my $link_url = "http://localhost:1978/node/$test2_node";
+
+	ok($node->set_link( $link_url, $test2_label, 42), "set_link $test2_node ($test2_label) 42");
+
+	ok(my $links = $node->links, 'links');
+
+	cmp_ok($#{$links}, '==', 0, 'one link');
+
+	like($links->[0], qr/^$link_url/, 'link correct');
+
+	ok($node->set_link("http://localhost:1978/node/$test2_node", $test2_label, 0), "set_link $test2_node ($test2_label) delete");
 }	# SKIP 2
 
 }	# SKIP 1

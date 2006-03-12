@@ -1,0 +1,748 @@
+----------------------------------------------------------------------
+r113:  dpavlin | 2006-03-12 16:25:06 +0100
+Changed paths:
+  M  /trunk/MANIFEST
+
+updated
+----------------------------------------------------------------------
+r112:  dpavlin | 2006-03-12 16:20:06 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+version 0.04 ready for CPAN
+----------------------------------------------------------------------
+r111:  dpavlin | 2006-02-21 16:41:57 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+store all values from _set_info in $self->{inform}
+----------------------------------------------------------------------
+r110:  dpavlin | 2006-02-21 16:40:54 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+support 0 sa word_num (if HyperEstraier didn't have time to sync to disk)
+----------------------------------------------------------------------
+r109:  dpavlin | 2006-02-20 22:21:04 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix test if no test2 exists
+----------------------------------------------------------------------
+r108:  dpavlin | 2006-02-19 18:13:57 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+fix typo
+----------------------------------------------------------------------
+r107:  dpavlin | 2006-02-19 18:01:49 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added node methods admins, guests and links, set_link now refresh info
+----------------------------------------------------------------------
+r106:  dpavlin | 2006-02-19 15:26:21 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+another fix for last few tests
+----------------------------------------------------------------------
+r105:  dpavlin | 2006-02-19 14:50:50 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix tests without node test1
+----------------------------------------------------------------------
+r104:  dpavlin | 2006-02-19 14:50:36 +0100
+Changed paths:
+  M  /trunk/Makefile.PL
+
+make ChangeLog from svk
+----------------------------------------------------------------------
+r103:  dpavlin | 2006-01-28 21:44:15 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+uri_to_id doesn't croak, even when used with croak_on_error
+----------------------------------------------------------------------
+r102:  dpavlin | 2006-01-28 20:46:20 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/scripts/example_indexer.pl
+  M  /trunk/scripts/example_searcher.pl
+
+more documentation update
+----------------------------------------------------------------------
+r101:  dpavlin | 2006-01-28 20:43:23 +0100
+Changed paths:
+  M  /trunk/scripts/example_indexer.pl
+  M  /trunk/scripts/example_searcher.pl
+
+updated example scripts
+----------------------------------------------------------------------
+r100:  dpavlin | 2006-01-28 20:41:59 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added $res->hits to get number of hits from estmaster hints
+----------------------------------------------------------------------
+r99:  dpavlin | 2006-01-28 20:19:25 +0100
+Changed paths:
+  M  /trunk/t/1_Document.t
+
+removed debugging output
+----------------------------------------------------------------------
+r98:  dpavlin | 2006-01-28 20:18:13 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/2_Condition.t
+
+improved $cond->set_options to support one or more arguments and reset
+options on each call, e.g.
+$cond->set_options('SURE') or
+$cond->set_options(qw/SURE NOIDF/)
+----------------------------------------------------------------------
+r97:  dpavlin | 2006-01-28 19:19:47 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_Document.t
+
+another fix for empty values
+----------------------------------------------------------------------
+r96:  dpavlin | 2006-01-28 18:58:22 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+fix for 0 values
+----------------------------------------------------------------------
+r95:  dpavlin | 2006-01-28 18:55:48 +0100
+Changed paths:
+  M  /trunk/t/1_Document.t
+
+test handling of attributes with value 0
+----------------------------------------------------------------------
+r94:  dpavlin | 2006-01-28 18:38:00 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+cleanup test
+----------------------------------------------------------------------
+r93:  dpavlin | 2006-01-28 17:43:45 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+Hyper Estraier 1.0.6 doesn't like attributes with no value (undef in perl),
+so we skip them in dump_draft
+----------------------------------------------------------------------
+r92:  dpavlin | 2006-01-26 16:29:20 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix number of tests skipped if test node is missing
+----------------------------------------------------------------------
+r91:  dpavlin | 2006-01-26 02:53:58 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added hints to return all hints from server
+----------------------------------------------------------------------
+r90:  dpavlin | 2006-01-26 02:53:29 +0100
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+created separate filter_to_pages sub, added text/postscript support via pstotext
+----------------------------------------------------------------------
+r89:  dpavlin | 2006-01-26 00:38:57 +0100
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+removed dependency on (optional in the first place) native HyperEstraier module
+----------------------------------------------------------------------
+r88:  dpavlin | 2006-01-21 19:25:09 +0100
+Changed paths:
+  M  /trunk/scripts/estcp.pl
+
+fix URL extraction, make it less chatty (without -d flag)
+----------------------------------------------------------------------
+r87:  dpavlin | 2006-01-21 18:37:07 +0100
+Changed paths:
+  M  /trunk/scripts/estcp-mt.pl
+
+fixed node URL extraction, put -1 marker on queue at end so that threads will finish
+after all documents are processed
+----------------------------------------------------------------------
+r86:  dpavlin | 2006-01-19 15:33:33 +0100
+Changed paths:
+  M  /trunk/scripts/estcp-mt.pl (from /trunk/scripts/estcp.pl:85)
+
+multi-threaded version of estcp
+----------------------------------------------------------------------
+r85:  dpavlin | 2006-01-17 16:00:50 +0100
+Changed paths:
+  M  /trunk/scripts/estcp.pl
+
+create desintaion node if it doesn't exist
+----------------------------------------------------------------------
+r84:  dpavlin | 2006-01-17 12:43:38 +0100
+Changed paths:
+  M  /trunk/scripts/estcp.pl
+
+don't parse draft into document and back
+----------------------------------------------------------------------
+r83:  dpavlin | 2006-01-17 01:41:18 +0100
+Changed paths:
+  M  /trunk/scripts/estcp.pl
+
+fixed to stop coping and prevent cumulation of results
+----------------------------------------------------------------------
+r82:  dpavlin | 2006-01-17 01:17:50 +0100
+Changed paths:
+  M  /trunk/scripts/estcp.pl
+
+much better output of progress (requires Time::HiRes)
+----------------------------------------------------------------------
+r81:  dpavlin | 2006-01-17 01:03:45 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+allow null (undef in perl) values. Hyper Estraier seems to store them, so we
+should also support them.
+----------------------------------------------------------------------
+r80:  dpavlin | 2006-01-17 00:08:07 +0100
+Changed paths:
+  A  /trunk/scripts/estcp.pl
+
+copy Hyper Estraier index from one node to another
+----------------------------------------------------------------------
+r79:  dpavlin | 2006-01-16 22:47:21 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+test fix
+----------------------------------------------------------------------
+r78:  dpavlin | 2006-01-16 22:42:09 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added croak_on_error
+----------------------------------------------------------------------
+r77:  dpavlin | 2006-01-16 22:34:14 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/scripts/est-spider
+
+fix warning if called without $node->set_auth (anonymous access)
+----------------------------------------------------------------------
+r76:  dpavlin | 2006-01-16 22:19:44 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+return $node->{status} and $node->{status_message} if request wasn't succesful
+----------------------------------------------------------------------
+r74:  dpavlin | 2006-01-09 16:28:24 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+0.03 final
+----------------------------------------------------------------------
+r73:  dpavlin | 2006-01-09 16:26:50 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix to work without Hyper Estraier server installed
+----------------------------------------------------------------------
+r72:  dpavlin | 2006-01-09 16:22:43 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+tests now check if nodes 'test1' and 'test2' exists, and it they doesn't
+skip tests which connect to HyperEstraier
+----------------------------------------------------------------------
+r71:  dpavlin | 2006-01-09 16:22:05 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+fix set_link content-type
+----------------------------------------------------------------------
+r69:  dpavlin | 2006-01-08 17:49:53 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/MANIFEST
+
+0.03_1 on the way to CPAN
+----------------------------------------------------------------------
+r68:  dpavlin | 2006-01-08 01:13:09 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  A  /trunk/scripts/example_indexer.pl
+  A  /trunk/scripts/example_searcher.pl
+
+two simple examples included under synopsis in documentation
+----------------------------------------------------------------------
+r67:  dpavlin | 2006-01-08 00:50:51 +0100
+Changed paths:
+  M  /trunk/MANIFEST
+
+add META.yml
+----------------------------------------------------------------------
+r66:  dpavlin | 2006-01-08 00:48:59 +0100
+Changed paths:
+  M  /trunk/MANIFEST
+
+added example scripts
+----------------------------------------------------------------------
+r65:  dpavlin | 2006-01-08 00:48:16 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+add optional node parametar to new Search::Estraier::Node
+----------------------------------------------------------------------
+r64:  dpavlin | 2006-01-08 00:46:10 +0100
+Changed paths:
+  A  /trunk/scripts
+  A  /trunk/scripts/cpanest
+  A  /trunk/scripts/est-spider
+
+added example scripts to crawl filesystem and index cpan
+----------------------------------------------------------------------
+r63:  dpavlin | 2006-01-07 17:19:31 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+fix warning
+----------------------------------------------------------------------
+r62:  dpavlin | 2006-01-07 03:40:57 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+requre just uri for ResultDocument, all other parametars are optional
+----------------------------------------------------------------------
+r61:  dpavlin | 2006-01-07 02:21:28 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+transfer depth to cond_to_query
+----------------------------------------------------------------------
+r60:  dpavlin | 2006-01-07 01:00:15 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_Document.t
+
+added few checks to better handle empty documents, array return is not enforced any more.
+----------------------------------------------------------------------
+r59:  dpavlin | 2006-01-07 00:29:58 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/Makefile.PL
+
+replaced my broken socket code with LWP::UserAgent (as should I really done from beginning)
+----------------------------------------------------------------------
+r58:  dpavlin | 2006-01-06 22:05:05 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+fix _set_info size (multiple nls)
+----------------------------------------------------------------------
+r57:  dpavlin | 2006-01-06 21:58:26 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added set_link (not working?) and moved debug to option
+----------------------------------------------------------------------
+r56:  dpavlin | 2006-01-06 21:45:48 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added set_user
+----------------------------------------------------------------------
+r55:  dpavlin | 2006-01-06 21:39:58 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+move set_info to private _set_info, added set_snippet_width
+----------------------------------------------------------------------
+r54:  dpavlin | 2006-01-06 19:35:53 +0100
+Changed paths:
+  M  /trunk/Makefile.PL
+
+don't leave Makefile.old after make clean (we really need to remove Makefile before clean
+target does mv Makefile Makefile.old)
+----------------------------------------------------------------------
+r53:  dpavlin | 2006-01-06 15:39:45 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/4_NodeResult.t
+  M  /trunk/t/5_Node.t
+
+search work (Content-type and attributes fix), NodeResult->doc_num now
+return proper number of hits (and not index of last one which isi
+doc_num - 1)
+----------------------------------------------------------------------
+r52:  dpavlin | 2006-01-06 15:10:29 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+search which works
+----------------------------------------------------------------------
+r51:  dpavlin | 2006-01-06 14:19:50 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+cond_to_query needed for search (which is under construction)
+----------------------------------------------------------------------
+r50:  dpavlin | 2006-01-06 13:48:14 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added uri_escape where needed, fix edit_doc test
+----------------------------------------------------------------------
+r49:  dpavlin | 2006-01-06 13:40:23 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/Makefile.PL
+  M  /trunk/t/5_Node.t
+
+added get_doc_attr and get_doc_attr_by_uri by (again) extending _fetch_doc,
+fixed etch_doc (typo in name)
+----------------------------------------------------------------------
+r48:  dpavlin | 2006-01-06 03:07:10 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added name, label, doc_num, word_num and size properties for which I had to
+implement set_info.
+----------------------------------------------------------------------
+r47:  dpavlin | 2006-01-06 02:51:28 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+more checks, but still no hope for edit_doc
+----------------------------------------------------------------------
+r46:  dpavlin | 2006-01-06 02:40:04 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+small tweaks and corrections to tests
+----------------------------------------------------------------------
+r45:  dpavlin | 2006-01-06 02:36:09 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+uri_to_id and important fix for _fetch_doc
+----------------------------------------------------------------------
+r44:  dpavlin | 2006-01-06 02:12:10 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added etch_doc and etch_doc_by_uri by extending _fetch_doc
+----------------------------------------------------------------------
+r43:  dpavlin | 2006-01-06 01:04:28 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+better error messages, added get_doc and get_doc_by_uri
+----------------------------------------------------------------------
+r42:  dpavlin | 2006-01-06 00:38:32 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+edit_doc, add massive amount of vertical whitespace to make source more readable
+----------------------------------------------------------------------
+r41:  dpavlin | 2006-01-06 00:32:31 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+out_doc, out_doc_by_uri
+----------------------------------------------------------------------
+r40:  dpavlin | 2006-01-06 00:00:22 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+a lot of tuning and fixes, and put_doc which works!
+----------------------------------------------------------------------
+r39:  dpavlin | 2006-01-05 23:36:10 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added optional parametar to Node to turn on debugging (which isn't documented and probably
+won't be because it spits output using warn)
+----------------------------------------------------------------------
+r38:  dpavlin | 2006-01-05 23:27:03 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+more fun with http
+----------------------------------------------------------------------
+r37:  dpavlin | 2006-01-05 23:16:21 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+much better error messages
+----------------------------------------------------------------------
+r36:  dpavlin | 2006-01-05 22:51:54 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/Makefile.PL
+
+base64 encode basic auth data. Oh, why didn't I just use LWP?
+----------------------------------------------------------------------
+r35:  dpavlin | 2006-01-05 22:51:29 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+shuttle_url test which fails (and it shouldn't)
+----------------------------------------------------------------------
+r34:  dpavlin | 2006-01-05 22:09:53 +0100
+Changed paths:
+  M  /trunk/MANIFEST
+
+fix tests
+----------------------------------------------------------------------
+r33:  dpavlin | 2006-01-05 18:54:18 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/Makefile.PL
+
+implemetation of shuttle_url (using IO::Socket::INET instead of LWP for speed)
+----------------------------------------------------------------------
+r32:  dpavlin | 2006-01-05 16:38:34 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+status
+----------------------------------------------------------------------
+r31:  dpavlin | 2006-01-05 16:36:25 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+set_auth
+----------------------------------------------------------------------
+r30:  dpavlin | 2006-01-05 16:33:48 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+set_timeout
+----------------------------------------------------------------------
+r29:  dpavlin | 2006-01-05 16:30:35 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+set_url, set_proxy
+----------------------------------------------------------------------
+r28:  dpavlin | 2006-01-05 16:21:41 +0100
+Changed paths:
+  A  /trunk/t/5_Node.t
+
+test
+----------------------------------------------------------------------
+r27:  dpavlin | 2006-01-05 16:21:29 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+begin work on Search::Estraier::Node
+----------------------------------------------------------------------
+r26:  dpavlin | 2006-01-05 16:05:58 +0100
+Changed paths:
+  M  /trunk/t/1_Document.t
+
+cleanup
+----------------------------------------------------------------------
+r25:  dpavlin | 2006-01-05 16:01:56 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  A  /trunk/t/4_NodeResult.t
+
+implemented Search::Estraier::NodeResult
+----------------------------------------------------------------------
+r24:  dpavlin | 2006-01-05 15:33:05 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+cleanup
+----------------------------------------------------------------------
+r23:  dpavlin | 2006-01-05 15:30:42 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/3_ResultDocument.t
+
+finished ResultDocument
+----------------------------------------------------------------------
+r22:  dpavlin | 2006-01-05 14:55:55 +0100
+Changed paths:
+  A  /trunk/t/1_Document.t (from /trunk/t/1_document.t:14)
+  D  /trunk/t/1_document.t
+  A  /trunk/t/2_Condition.t (from /trunk/t/2_condition.t:19)
+  D  /trunk/t/2_condition.t
+
+change case of test files
+----------------------------------------------------------------------
+r21:  dpavlin | 2006-01-05 14:55:17 +0100
+Changed paths:
+  A  /trunk/t/3_ResultDocument.t
+
+test
+----------------------------------------------------------------------
+r20:  dpavlin | 2006-01-05 14:55:06 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+begin work on Search::HyperEstraier::ResultDocument
+----------------------------------------------------------------------
+r19:  dpavlin | 2006-01-05 00:10:48 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/2_condition.t
+
+finished Condition adding orders, attrs, max and options
+----------------------------------------------------------------------
+r18:  dpavlin | 2006-01-04 23:48:29 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/2_condition.t
+
+phrase
+----------------------------------------------------------------------
+r17:  dpavlin | 2006-01-04 23:46:16 +0100
+Changed paths:
+  M  /trunk/t/2_condition.t
+
+missing test for set_options (in last commit)
+----------------------------------------------------------------------
+r16:  dpavlin | 2006-01-04 23:43:24 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/2_condition.t
+
+Search::Estraier::Condition, new, set_phrase, set_order, set_max
+----------------------------------------------------------------------
+r15:  dpavlin | 2006-01-04 23:24:57 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/MANIFEST
+  A  /trunk/t/2_condition.t
+
+begin work on Search::Estraier::Condition, _s moved to Search::Estraier which other modules inherit
+----------------------------------------------------------------------
+r14:  dpavlin | 2006-01-04 22:51:01 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+new Document now accepts draft.
+----------------------------------------------------------------------
+r13:  dpavlin | 2006-01-04 20:37:38 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+added implementation of dump_draft
+----------------------------------------------------------------------
+r12:  dpavlin | 2006-01-04 20:28:30 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+added cat_texts
+----------------------------------------------------------------------
+r11:  dpavlin | 2006-01-04 16:50:08 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+fix texts
+----------------------------------------------------------------------
+r10:  dpavlin | 2006-01-04 16:48:00 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+demonstrate bug with texts
+----------------------------------------------------------------------
+r9:  dpavlin | 2006-01-04 16:28:39 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/Makefile.PL
+  M  /trunk/t/1_document.t
+
+added texts, fixed add_attr to delete atributes, tests now pass
+----------------------------------------------------------------------
+r8:  dpavlin | 2006-01-04 16:04:58 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+added $doc->attr('name'), fixed $doc->add_attr('name','value');
+----------------------------------------------------------------------
+r7:  dpavlin | 2006-01-04 15:57:27 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+added attr_names
+----------------------------------------------------------------------
+r6:  dpavlin | 2006-01-04 15:48:11 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+added id, documentation, rename of vars in test
+----------------------------------------------------------------------
+r5:  dpavlin | 2006-01-04 15:38:35 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+add_text, add_hidden_text
+----------------------------------------------------------------------
+r4:  dpavlin | 2006-01-04 14:33:07 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/1_document.t
+
+added $doc->delete and internal _s
+----------------------------------------------------------------------
+r3:  dpavlin | 2006-01-04 14:13:06 +0100
+Changed paths:
+  M  /trunk/MANIFEST
+  M  /trunk/Makefile.PL
+
+fix for path modifications
+----------------------------------------------------------------------
+r2:  dpavlin | 2006-01-04 14:11:43 +0100
+Changed paths:
+  A  /trunk/Estraier.pm
+  A  /trunk/MANIFEST
+  A  /trunk/Makefile.PL
+  A  /trunk/t
+  A  /trunk/t/1_document.t
+  A  /trunk/t/99_pod.t
+
+begin work on pure perl implementation of HyperEstraier module
+----------------------------------------------------------------------
+r1:  dpavlin | 2006-01-04 14:11:32 +0100
+Changed paths:
+  A  /trunk
+
+Directory for svk import.
+----------------------------------------------------------------------

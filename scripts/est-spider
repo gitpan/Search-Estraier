@@ -3,14 +3,10 @@ use strict;
 use File::Find;
 use Getopt::Long;
 use File::Which;
-use HyperEstraier;
 use Search::Estraier;
 use Text::Iconv;
 #use File::MMagic;
 use File::MMagic::XS qw/:compat/;
-
-# do we use Node API?
-my $node_url;
 
 my $collection;		# name which will be inserted
 my $path_add;		# add additional info in path
@@ -20,7 +16,6 @@ my $exclude;
 #$verbose = 1;
 my $debug = 0;
 my $force = 0;
-my $native = 0;
 
 my $result = GetOptions(
 	"collection=s" => \$collection,
@@ -28,12 +23,22 @@ my $result = GetOptions(
 	"verbose!" => \$verbose,
 	"debug!" => \$debug,
 	"exclude=s" => \$exclude,
-	"node=s" => \$node_url,
 	"force!" => \$force,
-	"native!" => \$native,
 );
 
-my $dir = shift @ARGV || die "usage: $0 [dir]";
+my ($node_url,$dir) = @ARGV;
+
+die <<"_END_OF_USAGE_" if (! $node_url || ! $dir);
+usage: $0 http://localhost:1978/node/my_dir /path/to/directory
+
+options:
+	--collection="name of collection"
+	--path=/path/to/add/at/end
+	--exclude=regex_to_exclude
+	--verbose
+	--force
+	--debug
+_END_OF_USAGE_
 
 if (! -e $dir) {
 	warn "directory $dir doesn't exist, skipping\n";
@@ -44,7 +49,14 @@ if (! -e $dir) {
 #$basedir =~ s,/[^/]+$,/,;
 #require "$basedir/filter.pm";
 
-my $pdftotext = which('pdftotext');
+my $filter;
+foreach my $f (qw/pdftotext pstotext/) {
+	my $w = which($f);
+	if ($f) {
+		$filter->{$f} = $w;
+		print STDERR "using $f filter at $w\n" if ($verbose);
+	}
+}
 
 #my $mm = new File::MMagic('/usr/share/misc/file/magic');
 my $mm = new File::MMagic::XS();
@@ -54,32 +66,9 @@ my $iconv = new Text::Iconv('iso-8859-2', 'utf-8');
 select(STDERR); $|=1;
 select(STDOUT); $|=1;
 
-print STDERR "using $pdftotext to convert pdf into html\n" if ($pdftotext && $verbose);
-
-my $db;
-if ($node_url) {
-	if ($native) {
-		$db = HyperEstraier::Node->new($node_url);
-	} else {
-		$db = new Search::Estraier::Node;
-		$db->set_url($node_url);
-	}
-	$db->set_auth('admin', 'admin');
-} else {
-	# open the database
-	$db = HyperEstraier::Database->new();
-	$db->open('/tmp/casket', $HyperEstraier::Database::DBWRITER | $HyperEstraier::Database::DBCREAT);
-
-	sub signal {
-		my($sig) = @_;
-		print "\nCaught a SIG$sig--syncing database and shutting down\n";
-		$db->sync();
-		exit(0);
-	}
-
-	$SIG{'INT'}  = \&signal;
-	$SIG{'QUIT'} = \&signal;
-}
+my $db = new Search::Estraier::Node;
+$db->set_url($node_url);
+$db->set_auth('admin', 'admin');
 
 find({ wanted => \&file, 
 	follow => 1,
@@ -87,19 +76,13 @@ find({ wanted => \&file,
 	no_chdir => 1,
 }, $dir);
 
-unless ($node_url) {
-	print "--- sync\n";
-	$db->sync();
 
-	print "--- optimize...\n";
-	$db->optimize(0);
-}
 exit;
 
-sub dump_contents($$$$) {
-	my ($db,$contents,$mtime,$path) = @_;
+sub dump_contents {
+	my ($db,$contents,$mtime,$path,$size) = @_;
 
-	return unless ($contents);	# don't die on empty files
+	return unless (defined($contents));	# don't die on empty files
 
 	if ($exclude && $path =~ m/$exclude/i) {
 		print STDERR "skip: $path\n" if ($verbose);
@@ -107,17 +90,14 @@ sub dump_contents($$$$) {
 	}
 
 	use bytes;
-	my $size = length $contents;
+	if (! $size) {
+		$size = length $contents;
+	}
 
 	print STDERR " [$size]" if ($verbose);
 
 	# create a document object 
-	my $doc;
-	if ($native) {
-		$doc = HyperEstraier::Document->new;
-	} else {
-		$doc = new Search::Estraier::Document;
-	}
+	my $doc = new Search::Estraier::Document;
 
 	my $title = $1 if ($contents =~ m#<title>(.+?)</title>#is);
 
@@ -132,58 +112,33 @@ sub dump_contents($$$$) {
 	$doc->add_attr('@size', $size);
 	$doc->add_attr('@mtime', $mtime);
 
-	# html2text
-	$contents =~ s#<[^>]+/*>##gs;
-	$contents =~ s#\s\s+# #gs;
+	if ($contents) {
+		# html2text
+		$contents =~ s#<[^>]+/*>##gs;
+		$contents =~ s#\s\s+# #gs;
 
-	$doc->add_text($iconv->convert($contents));
+		$doc->add_text($iconv->convert($contents));
+	}
+	# store path
+	$doc->add_hidden_text($path);
+	# boost title
+	$doc->add_hidden_text($title);
 
 #	print $doc->dump_draft if ($verbose);
 
 	# register the document object to the database
-	if ($node_url) {
-		$db->put_doc($doc);
-	} else {
-		$db->put_doc($doc, $HyperEstraier::Database::PDCLEAN);
-	}
+	$db->put_doc($doc);
 
 }
 
-sub file {
-
-	my $path = $_;
-	my $contents;
-
-	return if (! $force && -l $path || $path =~ m#/.svn# || $path =~ m/(~|.bak)$/);
-
-	my $mtime = (stat($path))[9] || -1;
-	my $mtime_db = $db->get_doc_attr_by_uri("file:///$path", '@mtime') || -2;
-
-	if ($mtime == $mtime_db) {
-		print STDERR "# same: $path $mtime\n" if ($verbose);
-		return unless($force);
-	} else {
-		print STDERR "# changed: $path $mtime != $mtime_db\n" if ($debug);
-	}
-
-	# skip files on which File::MMagic::XS croaks
-	return if ($path =~ m#\.au$#);
-
-	my $type = $mm->checktype_filename($path);
-	$type =~ s/\s+/ /gs;
-
-	print STDERR "# $path $type\n" if ($debug);
-
-	if ($pdftotext && -f $path && $type =~ m/pdf/i) {
+sub filter_to_pages {
+		my ($path, $mtime, $command) = @_;
 
 		print STDERR "$path {converting}" if ($verbose);
 
-		open(F,"$pdftotext -htmlmeta \"$path\" - |") || die "can't open $pdftotext with '$path'";
+		open(F,"$command |") || die "can't open $command with '$path': $!";
 		my $html;
 		while(<F>) {
-			# XXX why pdftotext barks if I try to use this is beyond me.
-			#$contents .= $_;
-
 			$html .= $_;
 		}
 		close(F);
@@ -216,12 +171,61 @@ sub file {
 			$page_nr++;
 		}
 
+
+
+}
+
+sub file {
+
+	my $path = $_;
+	my $contents;
+
+	return if (! $force && -l $path || $path =~ m#/.svn# || $path =~ m/(~|.bak)$/);
+
+	my $mtime = (stat($path))[9] || -1;
+	my $mtime_db = $db->get_doc_attr_by_uri("file:///$path", '@mtime') || -2;
+
+	if ($mtime == $mtime_db) {
+		print STDERR "# same: $path $mtime\n" if ($verbose);
+		return unless($force);
+	} else {
+		print STDERR "# changed: $path $mtime != $mtime_db\n" if ($debug);
+	}
+
+	# skip files on which File::MMagic::XS croaks
+	if ($path =~ m#\.au$#) {
+		warn "skipped '$path' to prevent File::MMagic::XS bug\n" if ($debug);
+		return;
+	}
+
+	my $type = $mm->checktype_filename($path);
+	$type =~ s/\s+/ /gs;
+
+	print STDERR "# $path $type\n" if ($debug);
+
+	if ($type =~ m/pdf/i) {
+		if ($filter->{pdftotext}) {
+			filter_to_pages($path, $mtime, qq( $filter->{pdftotext} -htmlmeta "$path" - ));
+		} else {
+			warn "skipping '$path', no pdftotext filter\n" if ($verbose);
+			return;
+		}
+	} elsif ($type eq 'application/postscript') {
+		if ($filter->{pstotext}) {
+			filter_to_pages($path, $mtime, qq( $filter->{pstotext} "$path" ));
+		} else {
+			warn "skipping '$path', no pstotext filter\n" if ($verbose);
+			return;
+		}
 	} else {
 
 #		return if (! -f $path || ! m/\.(html*|php|pl|txt|info|log|text)$/i);
-		return unless (-f $path && $type =~ m/html/ ||
-			($type =~ m#text# && $path =~ m/\.(php|pl|txt|info|log|text)$/io)
-		);
+		if (-f $path && $type =~ m/html/ ||
+			($path !~ m/\.(php|pl|txt|info|log|text)$/io)
+		) {
+			dump_contents($db, '', $mtime, $path, -s $path);
+			return;
+		}
 
 		# skip index files
 		return if (m/index_[a-z]\.html*/i || m/index_symbol\.html*/i);

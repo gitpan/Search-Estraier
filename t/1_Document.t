@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 37;
+use Test::More tests => 54;
 use Test::Exception;
 use Data::Dumper;
 
@@ -17,6 +17,9 @@ BEGIN { use_ok('Search::Estraier') };
 my $attr_data = {
 	'@uri' => 'http://localhost/Search-Estraier/',
 	'size' => 42,
+	'zero' => 0,
+	'foo' => 'bar',
+	'empty' => '',
 };
 
 my @test_texts = (
@@ -36,8 +39,9 @@ ok($doc->delete, "delete");
 ok($doc = new Search::Estraier::Document, 'new');
 
 foreach my $a (keys %{$attr_data}) {
-	my $d = $attr_data->{$a} || die;
-	ok($doc->add_attr($a, $d), "add_attr $a");
+	my $d = $attr_data->{$a};
+	ok($doc->add_attr($a, $d), "add_attr $a = $d");
+	#diag "draft:\n",$doc->dump_draft,Dumper($doc->{attrs});
 	cmp_ok($doc->attr($a), 'eq', $d, "attr $a = $d");
 }
 
@@ -51,6 +55,11 @@ ok(my @texts = $doc->texts, 'texts');
 
 ok(my $draft = $doc->dump_draft, 'dump_draft');
 
+foreach my $a (keys %{$attr_data}) {
+	my $regex = $a . '=' . $attr_data->{$a};
+	like($draft, qr/$regex/, "draft has $regex");
+}
+
 #diag "dump_draft:\n$draft";
 
 ok(my $doc2 = new Search::Estraier::Document($draft), 'new from draft');
@@ -62,12 +71,12 @@ cmp_ok($doc2->id, '==', -1, 'id');
 ok(my @attr = $doc->attr_names, 'attr_names');
 #diag "attr_names: ", join(',',@attr), "\n";
 
-cmp_ok(scalar @attr, '==', 2, 'attr_names');
+cmp_ok(scalar @attr, '==', keys %{$attr_data}, 'attr_names');
 
 ok(! $doc->attr('foobar'), "non-existant attr");
 
 foreach my $a (keys %{$attr_data}) {
-	cmp_ok($attr_data->{$a}, 'eq', $doc->attr($a), "attr $a = ".$attr_data->{$a});
+	cmp_ok($doc->attr($a), 'eq', $attr_data->{$a}, "attr $a = ".$attr_data->{$a});
 	ok($doc->add_attr($a, undef), "delete attribute");
 }
 

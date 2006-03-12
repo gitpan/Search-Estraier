@@ -10,9 +10,12 @@ example_searcher.pl - example searcher for Search::Estraier
 =cut
 
 # create and configure node
-my $node = new Search::Estraier::Node;
-$node->set_url("http://localhost:1978/node/test");
-$node->set_auth("admin","admin");
+my $node = new Search::Estraier::Node(
+	url => 'http://localhost:1978/node/test',
+	user => 'admin',
+	passwd => 'admin',
+	croak_on_error => 1,
+);
 
 # create condition
 my $cond = new Search::Estraier::Condition;
@@ -21,7 +24,10 @@ my $cond = new Search::Estraier::Condition;
 $cond->set_phrase("rainbow AND lullaby");
 
 my $nres = $node->search($cond, 0);
+
 if (defined($nres)) {
+	print "Got ", $nres->hits, " results\n";
+
 	# for each document in results
 	for my $i ( 0 ... $nres->doc_num - 1 ) {
 		# get result document

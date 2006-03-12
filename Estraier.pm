@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 NAME
 
@@ -17,9 +17,11 @@ Search::Estraier - pure perl module to use Hyper Estraier search engine
 	use Search::Estraier;
 
 	# create and configure node
-	my $node = new Search::Estraier::Node;
-	$node->set_url("http://localhost:1978/node/test");
-	$node->set_auth("admin","admin");
+	my $node = new Search::Estraier::Node(
+		url => 'http://localhost:1978/node/test',
+		user => 'admin',
+		passwd => 'admin'
+	);
 
 	# create document
 	my $doc = new Search::Estraier::Document;
@@ -32,16 +34,19 @@ Search::Estraier - pure perl module to use Hyper Estraier search engine
 	$doc->add_text("Somewhere over the rainbow.  Way up high.");
 	$doc->add_text("There's a land that I heard of once in a lullaby.");
 
-	die "error: ", $node->status,"\n" unless ($node->put_doc($doc));
+	die "error: ", $node->status,"\n" unless (eval { $node->put_doc($doc) });
 
 =head2 Simple searcher
 
 	use Search::Estraier;
 
 	# create and configure node
-	my $node = new Search::Estraier::Node;
-	$node->set_url("http://localhost:1978/node/test");
-	$node->set_auth("admin","admin");
+	my $node = new Search::Estraier::Node(
+		url => 'http://localhost:1978/node/test',
+		user => 'admin',
+		passwd => 'admin',
+		croak_on_error => 1,
+	);
 
 	# create condition
 	my $cond = new Search::Estraier::Condition;
@@ -50,7 +55,10 @@ Search::Estraier - pure perl module to use Hyper Estraier search engine
 	$cond->set_phrase("rainbow AND lullaby");
 
 	my $nres = $node->search($cond, 0);
+
 	if (defined($nres)) {
+		print "Got ", $nres->hits, " results\n";
+
 		# for each document in results
 		for my $i ( 0 ... $nres->doc_num - 1 ) {
 			# get result document
@@ -92,7 +100,8 @@ Remove multiple whitespaces from string, as well as whitespaces at beginning or 
 =cut
 
 sub _s {
-	my $text = $_[1] || return;
+	my $text = $_[1];
+	return unless defined($text);
 	$text =~ s/\s\s+/ /gs;
 	$text =~ s/^\s+//;
 	$text =~ s/\s+$//;
@@ -157,12 +166,12 @@ sub new {
 			} elsif ($line =~ m/^$/) {
 				$in_text = 1;
 				next;
-			} elsif ($line =~ m/^(.+)=(.+)$/) {
+			} elsif ($line =~ m/^(.+)=(.*)$/) {
 				$self->{attrs}->{ $1 } = $2;
 				next;
 			}
 
-			warn "draft ignored: $line\n";
+			warn "draft ignored: '$line'\n";
 		}
 	}
 
@@ -320,7 +329,8 @@ sub dump_draft {
 	my $draft;
 
 	foreach my $attr_name (sort keys %{ $self->{attrs} }) {
-		$draft .= $attr_name . '=' . $self->{attrs}->{$attr_name} . "\n";
+		next unless defined(my $v = $self->{attrs}->{$attr_name});
+		$draft .= $attr_name . '=' . $v . "\n";
 	}
 
 	if ($self->{kwords}) {
@@ -368,7 +378,7 @@ sub delete {
 
 package Search::Estraier::Condition;
 
-use Carp qw/confess croak/;
+use Carp qw/carp confess croak/;
 
 use Search::Estraier;
 our @ISA = qw/Search::Estraier/;
@@ -446,30 +456,71 @@ sub set_max {
 
 =head2 set_options
 
-  $cond->set_options( SURE => 1 );
+  $cond->set_options( 'SURE' );
+
+  $cond->set_options( qw/AGITO NOIDF SIMPLE/ );
+
+Possible options are:
+
+=over 8
+
+=item SURE
+
+check every N-gram
+
+=item USUAL
+
+check every second N-gram
+
+=item FAST
+
+check every third N-gram
+
+=item AGITO
+
+check every fourth N-gram
+
+=item NOIDF
+
+don't perform TF-IDF tuning
+
+=item SIMPLE
+
+use simplified query phrase
+
+=back
+
+Skipping N-grams will speed up search, but reduce accuracy. Every call to C<set_options> will reset previous
+options;
+
+This option changed in version C<0.04> of this module. It's backwards compatibile.
 
 =cut
 
 my $options = {
-	# check N-gram keys skipping by three
 	SURE => 1 << 0,
-	# check N-gram keys skipping by two
 	USUAL => 1 << 1,
-	# without TF-IDF tuning
 	FAST => 1 << 2,
-	# with the simplified phrase
 	AGITO => 1 << 3,
-	# check every N-gram key
 	NOIDF => 1 << 4,
-	# check N-gram keys skipping by one
 	SIMPLE => 1 << 10,
 };
 
 sub set_options {
 	my $self = shift;
-	my $option = shift;
-	confess "unknown option" unless ($options->{$option});
-	$self->{options} ||= $options->{$option};
+	my $opt = 0;
+	foreach my $option (@_) {
+		my $mask;
+		unless ($mask = $options->{$option}) {
+			if ($option eq '1') {
+				next;
+			} else {
+				croak "unknown option $option";
+			}
+		}
+		$opt += $mask;
+	}
+	$self->{options} = $opt;
 }
 
 
@@ -691,6 +742,9 @@ Return number of documents
 
   print $res->doc_num;
 
+This will return real number of documents (limited by C<max>).
+If you want to get total number of hits, see C<hits>.
+
 =cut
 
 sub doc_num {
@@ -722,7 +776,7 @@ sub get_doc {
 
 Return specific hint from results.
 
-  print $rec->hint( 'VERSION' );
+  print $res->hint( 'VERSION' );
 
 Possible hints are: C<VERSION>, C<NODE>, C<HIT>, C<HINT#n>, C<DOCNUM>, C<WORDNUM>,
 C<TIME>, C<LINK#n>, C<VIEW>.
@@ -735,6 +789,37 @@ sub hint {
 	return $self->{hints}->{$key};
 }
 
+=head2 hints
+
+More perlish version of C<hint>. This one returns hash.
+
+  my %hints = $res->hints;
+
+=cut
+
+sub hints {
+	my $self = shift;
+	return $self->{hints};
+}
+
+=head2 hits
+
+Syntaxtic sugar for total number of hits for this query
+
+  print $res->hits;
+
+It's same as
+
+  print $res->hint('HIT');
+
+but shorter.
+
+=cut
+
+sub hits {
+	my $self = shift;
+	return $self->{hints}->{'HIT'} || 0;
+}
 
 package Search::Estraier::Node;
 
@@ -754,6 +839,34 @@ or optionally with C<url> as parametar
 
   my $node = new Search::HyperEstraier::Node( 'http://localhost:1978/node/test' );
 
+or in more verbose form
+
+  my $node = new Search::HyperEstraier::Node(
+  	url => 'http://localhost:1978/node/test',
+	debug => 1,
+	croak_on_error => 1
+  );
+
+with following arguments:
+
+=over 4
+
+=item url
+
+URL to node
+
+=item debug
+
+dumps a B<lot> of debugging output
+
+=item croak_on_error
+
+very helpful during development. It will croak on all errors instead of
+silently returning C<-1> (which is convention of Hyper Estraier API in other
+languages).
+
+=back
+
 =cut
 
 sub new {
@@ -761,14 +874,12 @@ sub new {
 	my $self = {
 		pxport => -1,
 		timeout => 0,	# this used to be -1
-		dnum => -1,
-		wnum => -1,
-		size => -1.0,
 		wwidth => 480,
 		hwidth => 96,
 		awidth => 96,
 		status => -1,
 	};
+
 	bless($self, $class);
 
 	if ($#_ == 0) {
@@ -776,9 +887,16 @@ sub new {
 	} else {
 		my $args = {@_};
 
-		$self->{debug} = $args->{debug};
+		%$self = ( %$self, @_ );
+
 		warn "## Node debug on\n" if ($self->{debug});
 	}
+
+	$self->{inform} = {
+		dnum => -1,
+		wnum => -1,
+		size => -1.0,
+	};
 
 	$self ? return $self : return undef;
 }
@@ -1058,12 +1176,14 @@ Get ID of document specified by URI
 
   my $id = $node->uri_to_id( 'file:///document/uri/42' );
 
+This method won't croak, even if using C<croak_on_error>.
+
 =cut
 
 sub uri_to_id {
 	my $self = shift;
 	my $uri = shift || return;
-	return $self->_fetch_doc( uri => $uri, path => '/uri_to_id', chomp_resbody => 1 );
+	return $self->_fetch_doc( uri => $uri, path => '/uri_to_id', chomp_resbody => 1, croak_on_error => 0 );
 }
 
 
@@ -1123,6 +1243,7 @@ sub _fetch_doc {
 		'application/x-www-form-urlencoded',
 		$arg,
 		\$resbody,
+		$a->{croak_on_error},
 	);
 
 	return if ($rv != 200);
@@ -1153,8 +1274,8 @@ sub _fetch_doc {
 
 sub name {
 	my $self = shift;
-	$self->_set_info unless ($self->{name});
-	return $self->{name};
+	$self->_set_info unless ($self->{inform}->{name});
+	return $self->{inform}->{name};
 }
 
 
@@ -1166,8 +1287,8 @@ sub name {
 
 sub label {
 	my $self = shift;
-	$self->_set_info unless ($self->{label});
-	return $self->{label};
+	$self->_set_info unless ($self->{inform}->{label});
+	return $self->{inform}->{label};
 }
 
 
@@ -1179,8 +1300,8 @@ sub label {
 
 sub doc_num {
 	my $self = shift;
-	$self->_set_info if ($self->{dnum} < 0);
-	return $self->{dnum};
+	$self->_set_info if ($self->{inform}->{dnum} < 0);
+	return $self->{inform}->{dnum};
 }
 
 
@@ -1192,8 +1313,8 @@ sub doc_num {
 
 sub word_num {
 	my $self = shift;
-	$self->_set_info if ($self->{wnum} < 0);
-	return $self->{wnum};
+	$self->_set_info if ($self->{inform}->{wnum} < 0);
+	return $self->{inform}->{wnum};
 }
 
 
@@ -1205,8 +1326,8 @@ sub word_num {
 
 sub size {
 	my $self = shift;
-	$self->_set_info if ($self->{size} < 0);
-	return $self->{size};
+	$self->_set_info if ($self->{inform}->{size} < 0);
+	return $self->{inform}->{size};
 }
 
 
@@ -1391,7 +1512,9 @@ use LWP::UserAgent;
 sub shuttle_url {
 	my $self = shift;
 
-	my ($url, $content_type, $reqbody, $resbody) = @_;
+	my ($url, $content_type, $reqbody, $resbody, $croak_on_error) = @_;
+
+	$croak_on_error = $self->{croak_on_error} unless defined($croak_on_error);
 
 	$self->{status} = -1;
 
@@ -1418,7 +1541,7 @@ sub shuttle_url {
 
 	$req->headers->header( 'Host' => $url->host . ":" . $url->port );
 	$req->headers->header( 'Connection', 'close' );
-	$req->headers->header( 'Authorization', 'Basic ' . $self->{auth} );
+	$req->headers->header( 'Authorization', 'Basic ' . $self->{auth} ) if ($self->{auth});
 	$req->content_type( $content_type );
 
 	warn $req->headers->as_string,"\n" if ($self->{debug});
@@ -1432,9 +1555,15 @@ sub shuttle_url {
 
 	warn "## response status: ",$res->status_line,"\n" if ($self->{debug});
 
-	return -1 if (! $res->is_success);
-
 	($self->{status}, $self->{status_message}) = split(/\s+/, $res->status_line, 2);
+
+	if (! $res->is_success) {
+		if ($croak_on_error) {
+			croak("can't get $url: ",$res->status_line);
+		} else {
+			return -1;
+		}
+	}
 
 	$$resbody .= $res->content;
 
@@ -1534,11 +1663,57 @@ sub set_link {
 	my $reqbody = 'url=' . uri_escape($url) . '&label=' . uri_escape($label);
 	$reqbody .= '&credit=' . $credit if ($credit > 0);
 
-	$self->shuttle_url( $self->{url} . '/_set_link',
+	if ($self->shuttle_url( $self->{url} . '/_set_link',
 		'application/x-www-form-urlencoded',
 		$reqbody,
 		undef
-	) == 200;
+	) == 200) {
+		# refresh node info after adding link
+		$self->_set_info;
+		return 1;
+	}
+}
+
+=head2 admins
+
+ my @admins = @{ $node->admins };
+
+Return array of users with admin rights on node
+
+=cut
+
+sub admins {
+	my $self = shift;
+	$self->_set_info unless ($self->{inform}->{name});
+	return $self->{inform}->{admins};
+}
+
+=head2 guests
+
+ my @guests = @{ $node->guests };
+
+Return array of users with guest rights on node
+
+=cut
+
+sub guests {
+	my $self = shift;
+	$self->_set_info unless ($self->{inform}->{name});
+	return $self->{inform}->{guests};
+}
+
+=head2 links
+
+ my $links = @{ $node->links };
+
+Return array of links for this node
+
+=cut
+
+sub links {
+	my $self = shift;
+	$self->_set_info unless ($self->{inform}->{name});
+	return $self->{inform}->{links};
 }
 
 
@@ -1569,11 +1744,30 @@ sub _set_info {
 
 	return if ($rv != 200 || !$resbody);
 
-	# it seems that response can have multiple line endings
-	$resbody =~ s/[\r\n]+$//;
+	my @lines = split(/[\r\n]/,$resbody);
 
-	( $self->{name}, $self->{label}, $self->{dnum}, $self->{wnum}, $self->{size} ) =
-		split(/\t/, $resbody, 5);
+	$self->{inform} = {};
+
+	( $self->{inform}->{name}, $self->{inform}->{label}, $self->{inform}->{dnum},
+		$self->{inform}->{wnum}, $self->{inform}->{size} ) = split(/\t/, shift @lines, 5);
+
+	return $resbody unless (@lines);
+
+	shift @lines;
+
+	while(my $admin = shift @lines) {
+		push @{$self->{inform}->{admins}}, $admin;
+	}
+
+	while(my $guest = shift @lines) {
+		push @{$self->{inform}->{guests}}, $guest;
+	}
+
+	while(my $link = shift @lines) {
+		push @{$self->{inform}->{links}}, $link;
+	}
+
+	return $resbody;
 
 }
 

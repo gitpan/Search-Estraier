@@ -34,7 +34,7 @@ html: $(TO_INST_PM)
 	test ! -z "`which svn2html.pl`" && svn update && svn2html.pl > $(HTML_DIR)/Changes.html
 
 changelog:
-	svn update && svn -v log > Changes
+	svk log -v > Changes
 
 tags:
 	ctags *.p?

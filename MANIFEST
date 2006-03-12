@@ -1,3 +1,4 @@
+Changes
 Estraier.pm
 Makefile.PL
 MANIFEST			This list of files
@@ -11,4 +12,6 @@ scripts/cpanest
 scripts/est-spider
 scripts/example_indexer.pl
 scripts/example_searcher.pl
+scripts/estcp.pl
+scripts/estcp-mt.pl
 META.yml                                 Module meta-data (added by MakeMaker)

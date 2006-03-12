@@ -10,9 +10,11 @@ example_indexer.pl - example indexer for Search::Estraier
 =cut
 
 # create and configure node
-my $node = new Search::Estraier::Node;
-$node->set_url("http://localhost:1978/node/test");
-$node->set_auth("admin","admin");
+my $node = new Search::Estraier::Node(
+	url => 'http://localhost:1978/node/test',
+	user => 'admin',
+	passwd => 'admin'
+);
 
 # create document
 my $doc = new Search::Estraier::Document;
@@ -25,5 +27,5 @@ $doc->add_attr('@title', "Over the Rainbow");
 $doc->add_text("Somewhere over the rainbow.  Way up high.");
 $doc->add_text("There's a land that I heard of once in a lullaby.");
 
-die "error: ", $node->status,"\n" unless ($node->put_doc($doc));
+die "error: ", $node->status,"\n" unless (eval { $node->put_doc($doc) });
 
