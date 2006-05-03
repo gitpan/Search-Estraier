@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -596,6 +596,35 @@ Options are returned in numerical form.
 sub options {
 	my $self = shift;
 	return $self->{options};
+}
+
+
+=head2 set_skip
+
+Set number of skipped documents from beginning of results
+
+  $cond->set_skip(42);
+
+Similar to C<offset> in RDBMS.
+
+=cut
+
+sub set_skip {
+	my $self = shift;
+	$self->{skip} = shift;
+}
+
+=head2 skip
+
+Return skip for this condition.
+
+  print $cond->skip;
+
+=cut
+
+sub skip {
+	my $self = shift;
+	return $self->{skip};
 }
 
 
@@ -1490,6 +1519,7 @@ sub cond_to_query {
 	push @args, 'wwidth=' . $self->{wwidth};
 	push @args, 'hwidth=' . $self->{hwidth};
 	push @args, 'awidth=' . $self->{awidth};
+	push @args, 'skip=' . $self->{skip} if ($self->{skip});
 
 	return join('&', @args);
 }

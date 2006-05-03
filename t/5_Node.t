@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 106;
+use Test::More tests => 115;
 use Test::Exception;
 use Data::Dumper;
 
@@ -32,7 +32,7 @@ cmp_ok($node->status, '==', -1, 'status');
 
 SKIP: {
 
-skip "no $test1_node node in Hyper Estraier", 96, unless($node->name);
+skip "no $test1_node node in Hyper Estraier", 105, unless($node->name);
 
 my @res = ( -1, 200 );
 
@@ -100,17 +100,25 @@ cmp_ok($nres->doc_num, '==', $max, "doc_num = $max");
 
 cmp_ok($nres->hits, '==', $data_max, "hits");
 
-for ( 6 .. 10 ) {
-	my $uri = 'test' . $_;
+for my $i ( 0 .. ($nres->hits - 1) ) {
+	my $uri = 'test' . ($i + $data_max + 1);
+
+	if ($i < $nres->doc_num) {
+		ok( my $rdoc = $nres->get_doc( $i ), "get_doc $i");
+
+		cmp_ok( $rdoc->attr('@uri'), 'eq', $uri, "\@uri = $uri");
+		ok( my $k = $rdoc->keywords( $id ), "rdoc keywords");
+	}
+
 	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id($uri) = $id");
 	ok( $node->get_doc( $id ), "get_doc $id");
 	ok( $node->get_doc_by_uri( $uri ), "get_doc_by_uri $uri");
 	cmp_ok( $node->get_doc_attr( $id, '@uri' ), 'eq', $uri, "get_doc_attr $id");
 	cmp_ok( $node->get_doc_attr_by_uri( $uri, '@uri' ), 'eq', $uri, "get_doc_attr $id");
-	ok( my $k = $node->etch_doc( $id ), "etch_doc_by_uri $uri");
+	ok( my $k1 = $node->etch_doc( $id ), "etch_doc_by_uri $uri");
 	ok( my $k2 = $node->etch_doc_by_uri( $uri ), "etch_doc_by_uri $uri");
 	#diag Dumper($k, $k2);
-	ok( eq_hash( $k, $k2 ), "keywords");
+	ok( eq_hash( $k1, $k2 ), "keywords");
 }
 
 ok(my $hints = $nres->hints, 'hints');

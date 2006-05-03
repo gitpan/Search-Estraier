@@ -7,6 +7,7 @@ use Search::Estraier;
 use Text::Iconv;
 #use File::MMagic;
 use File::MMagic::XS qw/:compat/;
+use Time::HiRes qw/time/;
 
 my $collection;		# name which will be inserted
 my $path_add;		# add additional info in path
@@ -16,6 +17,7 @@ my $exclude;
 #$verbose = 1;
 my $debug = 0;
 my $force = 0;
+my $all = 0;
 
 my $result = GetOptions(
 	"collection=s" => \$collection,
@@ -24,6 +26,7 @@ my $result = GetOptions(
 	"debug!" => \$debug,
 	"exclude=s" => \$exclude,
 	"force!" => \$force,
+	"all!" => \$all,
 );
 
 my ($node_url,$dir) = @ARGV;
@@ -38,6 +41,7 @@ options:
 	--verbose
 	--force
 	--debug
+	--all	save placeholders for all files
 _END_OF_USAGE_
 
 if (! -e $dir) {
@@ -48,6 +52,9 @@ if (! -e $dir) {
 #my $basedir = $0;
 #$basedir =~ s,/[^/]+$,/,;
 #require "$basedir/filter.pm";
+
+my $docs = 0;
+my $start_t = time();
 
 my $filter;
 foreach my $f (qw/pdftotext pstotext/) {
@@ -66,9 +73,12 @@ my $iconv = new Text::Iconv('iso-8859-2', 'utf-8');
 select(STDERR); $|=1;
 select(STDOUT); $|=1;
 
-my $db = new Search::Estraier::Node;
-$db->set_url($node_url);
-$db->set_auth('admin', 'admin');
+my $db = new Search::Estraier::Node(
+	url => $node_url,
+	user => 'admin',
+	passwd => 'admin',
+	croak_on_error => 1,
+);
 
 find({ wanted => \&file, 
 	follow => 1,
@@ -76,6 +86,8 @@ find({ wanted => \&file,
 	no_chdir => 1,
 }, $dir);
 
+my $dur = (time() - $start_t) || 1;
+printf STDERR "%d documents in %.2fs [%.2f docs/s]\n", $docs, $dur, ($docs / $dur);
 
 exit;
 
@@ -124,10 +136,12 @@ sub dump_contents {
 	# boost title
 	$doc->add_hidden_text($title);
 
-#	print $doc->dump_draft if ($verbose);
+	print $doc->dump_draft if ($debug);
 
 	# register the document object to the database
 	$db->put_doc($doc);
+
+	$docs++;
 
 }
 
@@ -180,10 +194,12 @@ sub file {
 	my $path = $_;
 	my $contents;
 
-	return if (! $force && -l $path || $path =~ m#/.svn# || $path =~ m/(~|.bak)$/);
+	return if (! $force && -l $path || $path =~ m#/.svn# || $path =~ m/(~|.bak|.gif)$/);
+	return if (! $all && -d $path);
 
 	my $mtime = (stat($path))[9] || -1;
-	my $mtime_db = $db->get_doc_attr_by_uri("file:///$path", '@mtime') || -2;
+	my $mtime_db = eval { $db->get_doc_attr_by_uri("file:///$path", '@mtime') };
+	$mtime_db ||= -2;
 
 	if ($mtime == $mtime_db) {
 		print STDERR "# same: $path $mtime\n" if ($verbose);
@@ -220,15 +236,16 @@ sub file {
 	} else {
 
 #		return if (! -f $path || ! m/\.(html*|php|pl|txt|info|log|text)$/i);
-		if (-f $path && $type =~ m/html/ ||
-			($path !~ m/\.(php|pl|txt|info|log|text)$/io)
+		if (-f $path &&
+			$type !~ m/html/ &&
+			$path !~ m/\.(php|pl|txt|info|log|text)$/io
 		) {
-			dump_contents($db, '', $mtime, $path, -s $path);
+			dump_contents($db, '', $mtime, $path, -s $path) if ($all);
 			return;
 		}
 
 		# skip index files
-		return if (m/index_[a-z]\.html*/i || m/index_symbol\.html*/i);
+		return if ($path =~ m/index_(?:[a-z]+|symbol)\.html*/i);
 
 		open(F,"$path") || die "can't open file: $path";
 		print STDERR "$path ($type)" if ($verbose);
