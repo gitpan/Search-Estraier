@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 115;
+use Test::More tests => 142;
 use Test::Exception;
 use Data::Dumper;
 
@@ -12,8 +12,8 @@ BEGIN { use_ok('Search::Estraier') };
 my $debug = 0;
 
 # name of node for test
-my $test1_node = 'test1';
-my $test2_node = 'test2';
+my $test1_node = '_test1_' . $$;
+my $test2_node = '_test2_' . $$;
 
 ok(my $node = new Search::Estraier::Node( debug => $debug ), 'new');
 isa_ok($node, 'Search::Estraier::Node');
@@ -30,18 +30,97 @@ ok($node->set_auth('admin','admin'), 'set_auth');
 
 cmp_ok($node->status, '==', -1, 'status');
 
-SKIP: {
+# test master functionality
 
-skip "no $test1_node node in Hyper Estraier", 105, unless($node->name);
+#diag "not testing shutdown\n";
 
-my @res = ( -1, 200 );
+my $msg;
 
-my $nodelist;
-foreach my $url (qw{?action=nodelist http://localhost:1978/master?action=nodelist}) {
-	cmp_ok(
-		$node->shuttle_url( $url, 'text/plain', undef, \$nodelist)
-	,'==', shift @res, 'nodelist');
+ok($msg = $node->master( action => 'sync' ), "sync: $msg");
+
+#diag "not testing backup\n";
+
+ok(my @users = $node->master( action => 'userlist' ), 'userlist');
+
+#diag "users: ", Dumper( \@users );
+diag "found ", $#users + 1, " users";
+
+my $user = {
+	name => '_test_' . $$,
+	flags => 'b',
+	fname => 'Search::Estraier',
+	misc => 'test user',
+};
+
+ok($msg = $node->master(
+	action => 'useradd',
+	%{ $user },
+	passwd => 'test1234',
+), "useradd: $msg");
+
+ok(my @users2 = $node->master( action => 'userlist' ), 'userlist');
+cmp_ok($#users2, '==', $#users + 1, 'added user');
+
+while (my $row = shift @users2) {
+	next unless ($row->{name} eq $user);
+	map {
+		cmp_ok($user->{$_}, 'eq', $row->{$_}, "$_");
+	} keys %{ $user };
 }
+
+ok($msg = $node->master(
+	action => 'userdel',
+	name => $user->{name},
+), "userdel: $msg");
+
+ok(@users2 = $node->master( action => 'userlist' ), 'userlist');
+cmp_ok($#users2, '==', $#users, 'removed user');
+
+ok(my @nodes = $node->master( action => 'nodelist' ), 'nodelist' );
+#diag "nodelist: ", Dumper( \@nodes );
+diag "found ", $#nodes + 1, " nodes";
+
+if ($#nodes > 42) {
+	diag <<'_END_OF_WARNING_';
+
+This tests create three nodes in your Hyper Estraier.
+
+Since you have more than 43 modes, and Hyper Estraier needs more than
+1024 file descriptors for more than 46 nodes, expect tests to fail.
+
+If tests do fail, you can try to add
+
+ulimit -n 2048
+
+before staring estmaster, which will increase number of available nodes
+to 96 before estmaster runs out of file descriptors.
+
+_END_OF_WARNING_
+}
+
+my $temp_node = "_test_temp_$$";
+
+foreach my $node_name ( $test1_node , $test2_node, $temp_node ) {
+	ok($msg = $node->master(
+		action => 'nodeadd',
+		name => $node_name,
+		label => "$node_name label",
+	), "nodeadd $node_name: $msg");
+}
+
+ok($msg = $node->master(
+	action => 'nodeclr',
+	name => $temp_node,
+), "nodeclr $temp_node: $msg");
+
+ok($msg = $node->master(
+	action => 'nodedel',
+	name => $temp_node,
+), "nodedel $temp_node: $msg");
+
+#diag "not testing logrtt\n";
+
+# test document creation
 
 my $draft = <<'_END_OF_DRAFT_';
 @uri=data001
@@ -151,27 +230,84 @@ ok($node = new Search::Estraier::Node( url => "http://localhost:1978/node/$test1
 
 ok(! $node->uri_to_id('foobar'), 'uri_to_id without croak');
 
-# test users
 
+# test users
 ok(! $node->admins, 'no admins');
 ok(! $node->guests, 'no guests');
 
-SKIP: {
-	skip "no $test2_node in Hyper Estraier, skipping set_link", 5 unless (my $test2_label = $node2->label);
 
-	my $link_url = "http://localhost:1978/node/$test2_node";
+# test search without results
+ok($cond = new Search::Estraier::Condition, 'new cond');
+ok($cond->set_phrase('this_is_phrase_which_does_not_exits'), 'cond set_phrase');
 
-	ok($node->set_link( $link_url, $test2_label, 42), "set_link $test2_node ($test2_label) 42");
+ok($nres = $node->search( $cond, 0 ), 'search');
 
-	ok(my $links = $node->links, 'links');
+# now, test links
+my $test2_label = "$test2_node label";
+my $link_url = "http://localhost:1978/node/$test2_node";
+ok($node->set_link( $link_url, $test2_label, 42), "set_link $test2_node ($test2_label) 42");
+ok(my $links = $node->links, 'links');
+cmp_ok($#{$links}, '==', 0, 'one link');
+like($links->[0], qr/^$link_url/, 'link correct');
+ok($node->set_link("http://localhost:1978/node/$test2_node", $test2_label, 0), "set_link $test2_node ($test2_label) delete");
 
-	cmp_ok($#{$links}, '==', 0, 'one link');
+# cleanup test nodes
+foreach my $node_name ( $test1_node , $test2_node ) {
+	ok($msg = $node->master(
+		action => 'nodedel',
+		name => $node_name,
+	), "nodedel $node_name: $msg");
+}
 
-	like($links->[0], qr/^$link_url/, 'link correct');
+# test create
+my $node_name = '_test_create_' . $$;
+my $node_label = "test $$ label";
 
-	ok($node->set_link("http://localhost:1978/node/$test2_node", $test2_label, 0), "set_link $test2_node ($test2_label) delete");
-}	# SKIP 2
+ok($node = new Search::Estraier::Node(
+	url => "http://localhost:1978/node/$node_name",
+	create => 1,
+	label => $node_label,
+	croak_on_error => 1
+), "new create+croak");
 
-}	# SKIP 1
+cmp_ok($node->name, 'eq', $node_name, "node $node_name exists");
+cmp_ok($node->label, 'eq', $node_label, "node label: $node_label");
+
+ok($node = new Search::Estraier::Node(
+	url => "http://localhost:1978/node/$node_name",
+	create => 1,
+	label => $node_label,
+	croak_on_error => 0
+), "new create existing");
+
+ok($node = new Search::Estraier::Node(
+	url => "http://localhost:1978/node/$node_name",
+	create => 1,
+	label => $node_label,
+	croak_on_error => 1
+), "new create+croak existing");
+
+# cleanup
+ok($msg = $node->master(
+	action => 'nodedel',
+	name => $node_name,
+), "nodedel $node_name: $msg");
+
+# and again, this time without node
+ok($node = new Search::Estraier::Node(
+	url => "http://localhost:1978/node/$node_name",
+	create => 1,
+	label => $node_label,
+	croak_on_error => 0
+), "new create non-existing");
+
+cmp_ok($node->name, 'eq', $node_name, "node $node_name exists");
+cmp_ok($node->label, 'eq', $node_label, "node label: $node_label");
+
+# cleanup
+ok($msg = $node->master(
+	action => 'nodedel',
+	name => $node_name,
+), "nodedel $node_name: $msg");
 
 diag "over";

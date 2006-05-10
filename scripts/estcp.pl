@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Search::Estraier;
+use Search::Estraier 0.06;
 use URI::Escape qw/uri_escape/;
 use Time::HiRes;
 use POSIX qw/strftime/;
@@ -24,26 +24,18 @@ my $from_n = new Search::Estraier::Node(
 	url => $from,
 	croak_on_error => 1,
 	debug => $debug,
+	user => 'admin',
+	passwd => 'admin',
 );
 my $to_n = new Search::Estraier::Node(
 	url => $to,
 	croak_on_error => 1,
 	debug => $debug,
+	user => 'admin',
+	passwd => 'admin',
+	create => 1,
+	label => $from_n->label,
 );
-
-unless(eval{ $to_n->name }) {
-	if ($to =~ m#^(http://.+)/node/([^/]+)$#) {
-		my ($url,$name) = ($1,$2);
-		print "Creating '$name' on $url\n";
-		$to_n->shuttle_url( $url . '/master?action=nodeadd',
-			'application/x-www-form-urlencoded',
-			'name=' . uri_escape($name) . '&label=' . uri_escape( $name ),
-			undef,
-		);
-	} else {
-		die "can't extract node name from $to\n";
-	}
-}
 
 print "Copy from ",$from_n->name," (",$from_n->label,") to ",$to_n->name," (",$to_n->label,") - ",$from_n->doc_num," documents (",$from_n->word_num," words, ",$from_n->size," bytes)\n";
 

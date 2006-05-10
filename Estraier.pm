@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 NAME
 
@@ -20,7 +20,10 @@ Search::Estraier - pure perl module to use Hyper Estraier search engine
 	my $node = new Search::Estraier::Node(
 		url => 'http://localhost:1978/node/test',
 		user => 'admin',
-		passwd => 'admin'
+		passwd => 'admin',
+		create => 1,
+		label => 'Label for node',
+		croak_on_error => 1,
 	);
 
 	# create document
@@ -872,6 +875,10 @@ or in more verbose form
 
   my $node = new Search::HyperEstraier::Node(
   	url => 'http://localhost:1978/node/test',
+	user => 'admin',
+	passwd => 'admin'
+	create => 1,
+	label => 'optional node label',
 	debug => 1,
 	croak_on_error => 1
   );
@@ -883,6 +890,22 @@ with following arguments:
 =item url
 
 URL to node
+
+=item user
+
+specify username for node server authentication
+
+=item passwd
+
+password for authentication
+
+=item create
+
+create node if it doesn't exists
+
+=item label
+
+optional label for new node if C<create> is used
 
 =item debug
 
@@ -914,9 +937,9 @@ sub new {
 	if ($#_ == 0) {
 		$self->{url} = shift;
 	} else {
-		my $args = {@_};
-
 		%$self = ( %$self, @_ );
+
+		$self->set_auth( $self->{user}, $self->{passwd} ) if ($self->{user});
 
 		warn "## Node debug on\n" if ($self->{debug});
 	}
@@ -926,6 +949,19 @@ sub new {
 		wnum => -1,
 		size => -1.0,
 	};
+
+	if ($self->{create}) {
+		if (! eval { $self->name } || $@) {
+			my $name = $1 if ($self->{url} =~ m#/node/([^/]+)/*#);
+			croak "can't find node name in '$self->{url}'" unless ($name);
+			my $label = $self->{label} || $name;
+			$self->master(
+				action => 'nodeadd',
+				name => $name,
+				label => $label,
+			) || croak "can't create node $name ($label)";
+		}
+	}
 
 	$self ? return $self : return undef;
 }
@@ -1389,88 +1425,32 @@ sub search {
 	);
 	return if ($rv != 200);
 
-	my (@docs, $hints);
+	my @records 	= split /--------\[.*?\]--------(?::END)?\r?\n/, $resbody;
+	my $hintsText	= splice @records, 0, 2; # starts with empty record
+	my $hints		= { $hintsText =~ m/^(.*?)\t(.*?)$/gsm };
 
-	my @lines = split(/\n/, $resbody);
-	return unless (@lines);
+	# process records
+	my $docs = [];
+	foreach my $record (@records)
+	{
+		# split into keys and snippets
+		my ($keys, $snippet) = $record =~ m/^(.*?)\n\n(.*?)$/s;
 
-	my $border = $lines[0];
-	my $isend = 0;
-	my $lnum = 1;
+		# create document hash
+		my $doc				= { $keys =~ m/^(.*?)=(.*?)$/gsm };
+		$doc->{'@keywords'}	= $doc->{keywords};
+		($doc->{keywords})	= $keys =~ m/^%VECTOR\t(.*?)$/gm;
+		$doc->{snippet}		= $snippet;
 
-	while ( $lnum <= $#lines ) {
-		my $line = $lines[$lnum];
-		$lnum++;
-
-		#warn "## $line\n";
-		if ($line && $line =~ m/^\Q$border\E(:END)*$/) {
-			$isend = $1;
-			last;
-		}
-
-		if ($line =~ /\t/) {
-			my ($k,$v) = split(/\t/, $line, 2);
-			$hints->{$k} = $v;
-		}
+		push @$docs, new Search::Estraier::ResultDocument(
+			attrs 		=> $doc,
+			uri 		=> $doc->{'@uri'},
+			snippet 	=> $snippet,
+			keywords 	=> $doc->{'keywords'},
+		);
 	}
 
-	my $snum = $lnum;
-
-	while( ! $isend && $lnum <= $#lines ) {
-		my $line = $lines[$lnum];
-		#warn "# $lnum: $line\n";
-		$lnum++;
-
-		if ($line && $line =~ m/^\Q$border\E/) {
-			if ($lnum > $snum) {
-				my $rdattrs;
-				my $rdvector;
-				my $rdsnippet;
-				
-				my $rlnum = $snum;
-				while ($rlnum < $lnum - 1 ) {
-					#my $rdline = $self->_s($lines[$rlnum]);
-					my $rdline = $lines[$rlnum];
-					$rlnum++;
-					last unless ($rdline);
-					if ($rdline =~ /^%/) {
-						$rdvector = $1 if ($rdline =~ /^%VECTOR\t(.+)$/);
-					} elsif($rdline =~ /=/) {
-						$rdattrs->{$1} = $2 if ($rdline =~ /^(.+)=(.+)$/);
-					} else {
-						confess "invalid format of response";
-					}
-				}
-				while($rlnum < $lnum - 1) {
-					my $rdline = $lines[$rlnum];
-					$rlnum++;
-					$rdsnippet .= "$rdline\n";
-				}
-				#warn Dumper($rdvector, $rdattrs, $rdsnippet);
-				if (my $rduri = $rdattrs->{'@uri'}) {
-					push @docs, new Search::Estraier::ResultDocument(
-						uri => $rduri,
-						attrs => $rdattrs,
-						snippet => $rdsnippet,
-						keywords => $rdvector,
-					);
-				}
-			}
-			$snum = $lnum;
-			#warn "### $line\n";
-			$isend = 1 if ($line =~ /:END$/);
-		}
-
-	}
-
-	if (! $isend) {
-		warn "received result doesn't have :END\n$resbody";
-		return;
-	}
-
-	#warn Dumper(\@docs, $hints);
-
-	return new Search::Estraier::NodeResult( docs => \@docs, hints => $hints );
+	return new Search::Estraier::NodeResult( docs => $docs, hints => $hints );
 }
 
 
@@ -1746,6 +1726,135 @@ sub links {
 	return $self->{inform}->{links};
 }
 
+=head2 master
+
+Set actions on Hyper Estraier node master (C<estmaster> process)
+
+  $node->master(
+  	action => 'sync'
+  );
+
+All available actions are documented in
+L<http://hyperestraier.sourceforge.net/nguide-en.html#protocol>
+
+=cut
+
+my $estmaster_rest = {
+	shutdown => {
+		status => 202,
+	},
+	sync => {
+		status => 202,
+	},
+	backup => {
+		status => 202,
+	},
+	userlist => {
+		status => 200,
+		returns => [ qw/name passwd flags fname misc/ ],
+	},
+	useradd => {
+		required => [ qw/name passwd flags/ ],
+		optional => [ qw/fname misc/ ],
+		status => 200,
+	},
+	userdel => {
+		required => [ qw/name/ ],
+		status => 200,
+	},
+	nodelist => {
+		status => 200,
+		returns => [ qw/name label doc_num word_num size/ ],
+	},
+	nodeadd => {
+		required => [ qw/name/ ],
+		optional => [ qw/label/ ],
+		status => 200,
+	},
+	nodedel => {
+		required => [ qw/name/ ],
+		status => 200,
+	},
+	nodeclr => {
+		required => [ qw/name/ ],
+		status => 200,
+	},
+	nodertt => {
+		status => 200,	
+	},
+};
+
+sub master {
+	my $self = shift;
+
+	my $args = {@_};
+
+	# have action?
+	my $action = $args->{action} || croak "need action, available: ",
+		join(", ",keys %{ $estmaster_rest });
+
+	# check if action is valid
+	my $rest = $estmaster_rest->{$action};
+	croak "action '$action' is not supported, available actions: ",
+		join(", ",keys %{ $estmaster_rest }) unless ($rest);
+
+	croak "BUG: action '$action' needs return status" unless ($rest->{status});
+
+	my @args;
+
+	if ($rest->{required} || $rest->{optional}) {
+
+		map {
+			croak "need parametar '$_' for action '$action'" unless ($args->{$_});
+			push @args, $_ . '=' . uri_escape( $args->{$_} );
+		} ( @{ $rest->{required} } );
+
+		map {
+			push @args, $_ . '=' . uri_escape( $args->{$_} ) if ($args->{$_});
+		} ( @{ $rest->{optional} } );
+
+	}
+
+	my $uri = new URI( $self->{url} );
+
+	my $resbody;
+
+	my $status = $self->shuttle_url(
+		'http://' . $uri->host_port . '/master?action=' . $action ,
+		'application/x-www-form-urlencoded',
+		join('&', @args),
+		\$resbody,
+		1,
+	) or confess "shuttle_url failed";
+
+	if ($status == $rest->{status}) {
+		if ($rest->{returns} && wantarray) {
+
+			my @results;
+			my $fields = $#{$rest->{returns}};
+
+			foreach my $line ( split(/[\r\n]/,$resbody) ) {
+				my @e = split(/\t/, $line, $fields + 1);
+				my $row;
+				foreach my $i ( 0 .. $fields) {
+					$row->{ $rest->{returns}->[$i] } = $e[ $i ];
+				}
+				push @results, $row;
+			}
+
+			return @results;
+
+		} elsif ($resbody) {
+			chomp $resbody;
+			return $resbody;
+		} else {
+			return 0E0;
+		}
+	}
+
+	carp "expected status $rest->{status}, but got $status";
+	return undef;
+}
 
 =head1 PRIVATE METHODS
 
@@ -1817,6 +1926,7 @@ Hyper Estraier Ruby interface on which this module is based.
 
 Dobrica Pavlinusic, E<lt>dpavlin@rot13.orgE<gt>
 
+Robert Klep E<lt>robert@klep.nameE<gt> contributed refactored search code
 
 =head1 COPYRIGHT AND LICENSE
 

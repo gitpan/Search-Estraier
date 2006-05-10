@@ -9,6 +9,7 @@ scripts/estcp-mt.pl
 scripts/estcp.pl
 scripts/example_indexer.pl
 scripts/example_searcher.pl
+scripts/dbi-indexer.pl
 t/1_Document.t
 t/2_Condition.t
 t/3_ResultDocument.t

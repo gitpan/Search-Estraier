@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Search::Estraier;
+use Search::Estraier 0.06;
 use URI::Escape qw/uri_escape/;
 use Time::HiRes;
 use POSIX qw/strftime/;
@@ -30,11 +30,17 @@ my $from_n = new Search::Estraier::Node(
 	url => $from,
 	croak_on_error => 1,
 	debug => $debug,
+	user => 'admin',
+	passwd => 'admin',
 );
 my $to_n = new Search::Estraier::Node(
 	url => $to,
 	croak_on_error => 1,
 	debug => $debug,
+	user => 'admin',
+	passwd => 'admin',
+	create => 1,
+	label => $from_n->label,
 );
 
 unless(eval{ $to_n->name }) {
