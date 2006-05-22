@@ -103,6 +103,7 @@ use lib '/data/wait/lib';
 use WAIT::Parse::Base;
 use WAIT::Parse::Pod;
 use WAIT::Document::Tar;
+use WAIT::Document::Find;
 
 sub fname($);
 

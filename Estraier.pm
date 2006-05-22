@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07_1';
 
 =head1 NAME
 
@@ -1053,7 +1053,7 @@ Add a document
 
   $node->put_doc( $document_draft ) or die "can't add document";
 
-Return true on success or false on failture.
+Return true on success or false on failure.
 
 =cut
 
@@ -1061,11 +1061,15 @@ sub put_doc {
 	my $self = shift;
 	my $doc = shift || return;
 	return unless ($self->{url} && $doc->isa('Search::Estraier::Document'));
-	$self->shuttle_url( $self->{url} . '/put_doc',
+	if ($self->shuttle_url( $self->{url} . '/put_doc',
 		'text/x-estraier-draft',
 		$doc->dump_draft,
 		undef
-	) == 200;
+	) == 200) {
+		$self->_clear_info;
+		return 1;
+	}
+	return undef;
 }
 
 
@@ -1084,11 +1088,15 @@ sub out_doc {
 	my $id = shift || return;
 	return unless ($self->{url});
 	croak "id must be number, not '$id'" unless ($id =~ m/^\d+$/);
-	$self->shuttle_url( $self->{url} . '/out_doc',
+	if ($self->shuttle_url( $self->{url} . '/out_doc',
 		'application/x-www-form-urlencoded',
 		"id=$id",
 		undef
-	) == 200;
+	) == 200) {
+		$self->_clear_info;
+		return 1;
+	}
+	return undef;
 }
 
 
@@ -1106,11 +1114,15 @@ sub out_doc_by_uri {
 	my $self = shift;
 	my $uri = shift || return;
 	return unless ($self->{url});
-	$self->shuttle_url( $self->{url} . '/out_doc',
+	if ($self->shuttle_url( $self->{url} . '/out_doc',
 		'application/x-www-form-urlencoded',
 		"uri=" . uri_escape($uri),
 		undef
-	) == 200;
+	) == 200) {
+		$self->_clear_info;
+		return 1;
+	}
+	return undef;
 }
 
 
@@ -1128,11 +1140,15 @@ sub edit_doc {
 	my $self = shift;
 	my $doc = shift || return;
 	return unless ($self->{url} && $doc->isa('Search::Estraier::Document'));
-	$self->shuttle_url( $self->{url} . '/edit_doc',
+	if ($self->shuttle_url( $self->{url} . '/edit_doc',
 		'text/x-estraier-draft',
 		$doc->dump_draft,
 		undef
-	) == 200;
+	) == 200) {
+		$self->_clear_info;
+		return 1;
+	}
+	return undef;
 }
 
 
@@ -1499,7 +1515,7 @@ sub cond_to_query {
 	push @args, 'wwidth=' . $self->{wwidth};
 	push @args, 'hwidth=' . $self->{hwidth};
 	push @args, 'awidth=' . $self->{awidth};
-	push @args, 'skip=' . $self->{skip} if ($self->{skip});
+	push @args, 'skip=' . $cond->{skip} if ($cond->{skip});
 
 	return join('&', @args);
 }
@@ -1646,7 +1662,7 @@ sub set_user {
 	croak "mode must be number, not '$mode'" unless ($mode =~ m/^\d+$/);
 
 	$self->shuttle_url( $self->{url} . '/_set_user',
-		'text/plain',
+		'application/x-www-form-urlencoded',
 		'name=' . uri_escape($name) . '&mode=' . $mode,
 		undef
 	) == 200;
@@ -1679,9 +1695,10 @@ sub set_link {
 		undef
 	) == 200) {
 		# refresh node info after adding link
-		$self->_set_info;
+		$self->_clear_info;
 		return 1;
 	}
+	return undef;
 }
 
 =head2 admins
@@ -1828,6 +1845,10 @@ sub master {
 	) or confess "shuttle_url failed";
 
 	if ($status == $rest->{status}) {
+
+		# refresh node info after sync
+		$self->_clear_info if ($action eq 'sync' || $action =~ m/^node(?:add|del|clr)$/);
+
 		if ($rest->{returns} && wantarray) {
 
 			my @results;
@@ -1885,7 +1906,7 @@ sub _set_info {
 
 	my @lines = split(/[\r\n]/,$resbody);
 
-	$self->{inform} = {};
+	$self->_clear_info;
 
 	( $self->{inform}->{name}, $self->{inform}->{label}, $self->{inform}->{dnum},
 		$self->{inform}->{wnum}, $self->{inform}->{size} ) = split(/\t/, shift @lines, 5);
@@ -1908,6 +1929,25 @@ sub _set_info {
 
 	return $resbody;
 
+}
+
+=head2 _clear_info
+
+Clear information for node
+
+  $node->_clear_info;
+
+On next call to C<name>, C<label>, C<doc_num>, C<word_num> or C<size> node
+info will be fetch again from Hyper Estraier.
+
+=cut
+sub _clear_info {
+	my $self = shift;
+	$self->{inform} = {
+		dnum => -1,
+		wnum => -1,
+		size => -1.0,
+	};
 }
 
 ###

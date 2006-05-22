@@ -1,4 +1,94 @@
 ----------------------------------------------------------------------
+r156:  dpavlin | 2006-05-22 16:42:10 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/scripts/cpanest
+  M  /trunk/t/5_Node.t
+
+pre-release of 0.07_1
+----------------------------------------------------------------------
+r155:  dpavlin | 2006-05-18 16:31:42 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+bugfix: set_skip now really work
+----------------------------------------------------------------------
+r154:  dpavlin | 2006-05-16 18:05:23 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+
+send correct Content-type for set_user
+----------------------------------------------------------------------
+r153:  dpavlin | 2006-05-16 18:01:09 +0200
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+added usage of EST_USER and EST_PASSWD enviroment variables for credentials if
+they exists (otherwise, it will fallback to admin:admin)
+----------------------------------------------------------------------
+r152:  dpavlin | 2006-05-16 14:11:39 +0200
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+skip tests if estmaster isn't running, optional way to test against remove
+Hyper Estraier server using:
+
+ESTMASTER_URI=http://estraier.example.com:1978 make test
+
+----------------------------------------------------------------------
+r151:  dpavlin | 2006-05-16 13:39:53 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added _clear_info which is called in cases where comands modify stats about
+node (which will force re-read of those data from Hyper Estraier on next
+request), explanded test suite
+----------------------------------------------------------------------
+r150:  dpavlin | 2006-05-16 00:26:08 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+call _set_info to refresh data about node after calling out_doc*
+----------------------------------------------------------------------
+r149:  dpavlin | 2006-05-16 00:11:22 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+
+refresh _set_info after sync
+----------------------------------------------------------------------
+r148:  dpavlin | 2006-05-16 00:06:14 +0200
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+extended node tests
+----------------------------------------------------------------------
+r147:  dpavlin | 2006-05-10 23:41:35 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+added pk_col to config hash
+----------------------------------------------------------------------
+r146:  dpavlin | 2006-05-10 23:33:32 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+display rows/s rate
+----------------------------------------------------------------------
+r145:  dpavlin | 2006-05-10 23:09:05 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+added db_encoding
+----------------------------------------------------------------------
+r144:  dpavlin | 2006-05-10 22:31:02 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+create node if needed, moved config into hash
+----------------------------------------------------------------------
 r142:  dpavlin | 2006-05-10 16:57:50 +0200
 Changed paths:
   M  /trunk/Estraier.pm

@@ -3,22 +3,28 @@
 use strict;
 use blib;
 
-use Test::More tests => 142;
+my $tests = 270;
+
+use Test::More;
 use Test::Exception;
 use Data::Dumper;
 
 BEGIN { use_ok('Search::Estraier') };
 
-my $debug = 0;
+plan tests => $tests;
+
+my $debug = shift @ARGV;
 
 # name of node for test
 my $test1_node = '_test1_' . $$;
 my $test2_node = '_test2_' . $$;
 
+my $estmaster_uri = $ENV{'ESTMASTER_URI'} || 'http://localhost:1978';
+
 ok(my $node = new Search::Estraier::Node( debug => $debug ), 'new');
 isa_ok($node, 'Search::Estraier::Node');
 
-ok($node->set_url("http://localhost:1978/node/$test1_node"), "set_url $test1_node");
+ok($node->set_url("$estmaster_uri/node/$test1_node"), "set_url $test1_node");
 
 ok($node->set_proxy('', 8080), 'set_proxy');
 throws_ok {$node->set_proxy('proxy.example.com', 'foo') } qr/port/, 'set_proxy port NaN';
@@ -26,19 +32,25 @@ throws_ok {$node->set_proxy('proxy.example.com', 'foo') } qr/port/, 'set_proxy p
 ok($node->set_timeout(42), 'set_timeout');
 throws_ok {$node->set_timeout('foo') } qr/timeout/, 'set_timeout NaN';
 
-ok($node->set_auth('admin','admin'), 'set_auth');
+my ($user, $passwd) = (
+	$ENV{EST_USER} || 'admin',
+	$ENV{EST_PASSWD} || 'admin'
+);
+
+ok($node->set_auth($user, $passwd), 'set_auth');
 
 cmp_ok($node->status, '==', -1, 'status');
 
 # test master functionality
 
-#diag "not testing shutdown\n";
+SKIP: {
 
-my $msg;
+skip "can't find estmaster at $estmaster_uri", ($tests - 9) if (! eval { $node->master( action => 'nodelist' ) } );
 
-ok($msg = $node->master( action => 'sync' ), "sync: $msg");
+diag "using $estmaster_uri";
+diag("node->master shutdown not tested");
 
-#diag "not testing backup\n";
+diag("node->master backup not tested");
 
 ok(my @users = $node->master( action => 'userlist' ), 'userlist');
 
@@ -52,6 +64,7 @@ my $user = {
 	misc => 'test user',
 };
 
+my $msg;
 ok($msg = $node->master(
 	action => 'useradd',
 	%{ $user },
@@ -109,11 +122,6 @@ foreach my $node_name ( $test1_node , $test2_node, $temp_node ) {
 }
 
 ok($msg = $node->master(
-	action => 'nodeclr',
-	name => $temp_node,
-), "nodeclr $temp_node: $msg");
-
-ok($msg = $node->master(
 	action => 'nodedel',
 	name => $temp_node,
 ), "nodedel $temp_node: $msg");
@@ -123,7 +131,7 @@ ok($msg = $node->master(
 # test document creation
 
 my $draft = <<'_END_OF_DRAFT_';
-@uri=data001
+@uri=data0
 @title=Material Girl
 
 Living in a material world
@@ -137,35 +145,47 @@ ok(my $doc = new Search::Estraier::Document($draft), 'new doc from draft');
 
 ok( $node->put_doc($doc), "put_doc data001");
 
-for ( 1 .. 10 ) {
+for ( 1 .. 17 ) {
 	$doc->add_attr('@uri', 'test' . $_);
 	ok( $node->put_doc($doc), "put_doc test$_");
 	#diag $doc->dump_draft;
+	cmp_ok( $node->doc_num, '==', ($_ + 1), "node->doc_num " . ($_ + 1));
 }
+
+ok(! $node->uri_to_id( 'does-not-exists' ), "non-existant uri_to_id");
 
 my $id;
-ok($id = $node->uri_to_id( 'data001' ), "uri_to_id = $id");
+ok($id = $node->uri_to_id( 'data0' ), "uri_to_id(data0)");
 
-my $data_max = 5;
-
-for ( 1 .. $data_max ) {
-	ok( $node->out_doc_by_uri( 'test' . $_ ), "out_doc_by_uri test$_");
-}
-
-ok($doc = $node->get_doc( $id ), 'get_doc for edit');
+ok($doc = $node->get_doc( $id ), "get_doc($id) for edit");
 $doc->add_attr('foo', 'bar');
 #diag Dumper($doc);
 ok( $node->edit_doc( $doc ), 'edit_doc');
 
-ok( $node->out_doc( $id ), "out_doc $id");
+my $doc_num;
+ok( $doc_num = $node->doc_num, "node->doc_num $doc_num");
 
-ok( ! $node->edit_doc( $doc ), "edit removed");
+ok( $node->out_doc( $id ), "out_doc($id)");
 
-my $max = 3;
+cmp_ok( $node->doc_num, '==', --$doc_num, "node->doc_num " . $doc_num);
+
+ok( ! $node->edit_doc( $doc ), "edit_doc of removed doc");
+
+my $delete_num = 5;
+
+for ( 1 .. $delete_num ) {
+	ok( $node->out_doc_by_uri( 'test' . $_ ), "out_doc_by_uri test$_");
+	cmp_ok( $node->doc_num, '==', $doc_num - $_, "node->doc_num " . ($doc_num - $_));
+}
+
+my $doc_num2 = $doc_num - $delete_num;
+cmp_ok($node->doc_num, '==', $doc_num2, "node->doc_num $doc_num2");
+
+my $max = int($doc_num2 / 2);
 
 ok(my $cond = new Search::Estraier::Condition, 'new cond');
 ok($cond->set_phrase('girl'), 'cond set_phrase');
-ok($cond->set_max($max), "cond set_max $max");
+ok($cond->set_max($max), "cond set_max($max)");
 ok($cond->set_order('@uri ASCD'), 'cond set_order');
 ok($cond->add_attr('@title STRINC Material'), 'cond add_attr');
 
@@ -175,23 +195,30 @@ ok( my $nres = $node->search( $cond, 0 ), 'search');
 
 isa_ok( $nres, 'Search::Estraier::NodeResult' );
 
-cmp_ok($nres->doc_num, '==', $max, "doc_num = $max");
+cmp_ok($nres->doc_num, '==', $max, "nres->doc_num $max");
 
-cmp_ok($nres->hits, '==', $data_max, "hits");
+cmp_ok($nres->hits, '==', $doc_num2, "nres->hits $doc_num2");
 
+# upper limit is $nres->hits and not $nres->doc_num because we
+# check all documents, not just results!
 for my $i ( 0 .. ($nres->hits - 1) ) {
-	my $uri = 'test' . ($i + $data_max + 1);
+	my $num = $i + $delete_num + 1;
+	my $uri = 'test' . $num;
 
 	if ($i < $nres->doc_num) {
-		ok( my $rdoc = $nres->get_doc( $i ), "get_doc $i");
+		ok( my $rdoc = $nres->get_doc( $i ), "nres->get_doc $i");
 
 		cmp_ok( $rdoc->attr('@uri'), 'eq', $uri, "\@uri = $uri");
+		cmp_ok( $node->uri_to_id( $uri ), '==', $num + 1, "uri_to_id($uri)");
+
 		ok( my $k = $rdoc->keywords( $id ), "rdoc keywords");
+	} else {
+		ok( ! $nres->get_doc( $i ), "nres->get_doc doesn't exist");
 	}
 
-	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id($uri) = $id");
-	ok( $node->get_doc( $id ), "get_doc $id");
-	ok( $node->get_doc_by_uri( $uri ), "get_doc_by_uri $uri");
+	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id($uri)");
+	ok( $node->get_doc( $id ), "get_doc($id)");
+	ok( $node->get_doc_by_uri( $uri ), "get_doc_by_uri($uri)");
 	cmp_ok( $node->get_doc_attr( $id, '@uri' ), 'eq', $uri, "get_doc_attr $id");
 	cmp_ok( $node->get_doc_attr_by_uri( $uri, '@uri' ), 'eq', $uri, "get_doc_attr $id");
 	ok( my $k1 = $node->etch_doc( $id ), "etch_doc_by_uri $uri");
@@ -201,7 +228,7 @@ for my $i ( 0 .. ($nres->hits - 1) ) {
 }
 
 ok(my $hints = $nres->hints, 'hints');
-diag Dumper($hints);
+diag Dumper($hints) if ($debug);
 
 ok($node->_set_info, "refresh _set_info");
 
@@ -214,25 +241,47 @@ ok($v = $node->size, "size: $v");
 
 ok($node->set_snippet_width( 100, 10, 10 ), "set_snippet_width");
 
-# user doesn't exist
-ok(! $node->set_user('foobar', 1), 'set_user');
+# test skip
+my $skip = int($max / 2) || die "skip is zero, can't test";
+ok($cond->set_skip( $skip ), "cond set_skip($skip)");
 
-ok(my $node2 = new Search::Estraier::Node( "http://localhost:1978/node/$test2_node" ), "new $test2_node");
+like($node->cond_to_query( $cond ), qr/skip=$skip/, 'cond_to_query have skip');
+
+ok( $nres = $node->search( $cond, 0 ), 'search');
+isa_ok( $nres, 'Search::Estraier::NodeResult' );
+cmp_ok($nres->doc_num, '==', $max, "nres->doc_num " . ($max - $skip));
+cmp_ok($nres->hits, '==', $doc_num2, "nres->hits $doc_num2");
+
+for my $i ( 0 .. ($nres->doc_num - 1) ) {
+	my $uri = 'test' . ($i + $delete_num + $skip + 1);
+	ok( my $rdoc = $nres->get_doc( $i ), "nres->get_doc $i");
+	if ($rdoc) {
+		cmp_ok( $rdoc->attr('@uri'), 'eq', $uri, "\@uri = $uri");
+	} else {
+		fail('no rdoc');
+	}
+}
+
+
+# user doesn't exist
+ok($node->set_user('foobar', 1), 'set_user');
+
+ok(my $node2 = new Search::Estraier::Node( "$estmaster_uri/node/$test2_node" ), "new $test2_node");
 ok($node2->set_auth('admin','admin'), "set_auth $test2_node");
 
 # croak_on_error
 
-ok($node = new Search::Estraier::Node( url => "http://localhost:1978/non-existant", croak_on_error => 1 ), "new non-existant");
+ok($node = new Search::Estraier::Node( url => "$estmaster_uri/non-existant", croak_on_error => 1 ), "new non-existant");
 throws_ok { $node->name } qr/404/, 'croak on error';
 
 # croak_on_error
-ok($node = new Search::Estraier::Node( url => "http://localhost:1978/node/$test1_node", croak_on_error => 1 ), "new $test1_node");
+ok($node = new Search::Estraier::Node( url => "$estmaster_uri/node/$test1_node", croak_on_error => 1, user => $user, passwd => $passwd, debug => $debug ), "new $test1_node");
 
 ok(! $node->uri_to_id('foobar'), 'uri_to_id without croak');
 
 
 # test users
-ok(! $node->admins, 'no admins');
+ok($node->admins, 'have admins');
 ok(! $node->guests, 'no guests');
 
 
@@ -244,12 +293,19 @@ ok($nres = $node->search( $cond, 0 ), 'search');
 
 # now, test links
 my $test2_label = "$test2_node label";
-my $link_url = "http://localhost:1978/node/$test2_node";
+my $link_url = "$estmaster_uri/node/$test2_node";
 ok($node->set_link( $link_url, $test2_label, 42), "set_link $test2_node ($test2_label) 42");
 ok(my $links = $node->links, 'links');
 cmp_ok($#{$links}, '==', 0, 'one link');
 like($links->[0], qr/^$link_url/, 'link correct');
-ok($node->set_link("http://localhost:1978/node/$test2_node", $test2_label, 0), "set_link $test2_node ($test2_label) delete");
+ok($node->set_link("$estmaster_uri/node/$test2_node", $test2_label, 0), "set_link $test2_node ($test2_label) delete");
+
+ok($msg = $node->master(
+	action => 'nodeclr',
+	name => $node->name,
+), "nodeclr " . $node->name . ": $msg");
+
+cmp_ok($node->doc_num, '==', 0, 'no documents');
 
 # cleanup test nodes
 foreach my $node_name ( $test1_node , $test2_node ) {
@@ -264,7 +320,7 @@ my $node_name = '_test_create_' . $$;
 my $node_label = "test $$ label";
 
 ok($node = new Search::Estraier::Node(
-	url => "http://localhost:1978/node/$node_name",
+	url => "$estmaster_uri/node/$node_name",
 	create => 1,
 	label => $node_label,
 	croak_on_error => 1
@@ -274,14 +330,14 @@ cmp_ok($node->name, 'eq', $node_name, "node $node_name exists");
 cmp_ok($node->label, 'eq', $node_label, "node label: $node_label");
 
 ok($node = new Search::Estraier::Node(
-	url => "http://localhost:1978/node/$node_name",
+	url => "$estmaster_uri/node/$node_name",
 	create => 1,
 	label => $node_label,
 	croak_on_error => 0
 ), "new create existing");
 
 ok($node = new Search::Estraier::Node(
-	url => "http://localhost:1978/node/$node_name",
+	url => "$estmaster_uri/node/$node_name",
 	create => 1,
 	label => $node_label,
 	croak_on_error => 1
@@ -295,7 +351,7 @@ ok($msg = $node->master(
 
 # and again, this time without node
 ok($node = new Search::Estraier::Node(
-	url => "http://localhost:1978/node/$node_name",
+	url => "$estmaster_uri/node/$node_name",
 	create => 1,
 	label => $node_label,
 	croak_on_error => 0
@@ -309,5 +365,9 @@ ok($msg = $node->master(
 	action => 'nodedel',
 	name => $node_name,
 ), "nodedel $node_name: $msg");
+
+ok($msg = $node->master( action => 'sync' ), "sync: $msg");
+
+} # SKIP
 
 diag "over";
