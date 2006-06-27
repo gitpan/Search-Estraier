@@ -1,4 +1,23 @@
 ----------------------------------------------------------------------
+r160:  dpavlin | 2006-06-24 17:34:42 +0200
+Changed paths:
+  M  /trunk/Estraier.pm
+  M  /trunk/t/5_Node.t
+
+added cacheusage, version bumped to 0.07_2
+----------------------------------------------------------------------
+r159:  dpavlin | 2006-05-25 21:18:14 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+added command-line options and debug levels with increasing verbosity
+----------------------------------------------------------------------
+r158:  dpavlin | 2006-05-22 16:48:14 +0200
+Changed paths:
+  M  /trunk/Makefile.PL
+
+new target to make cpan distribution
+----------------------------------------------------------------------
 r156:  dpavlin | 2006-05-22 16:42:10 +0200
 Changed paths:
   M  /trunk/Estraier.pm

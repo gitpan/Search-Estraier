@@ -6,6 +6,7 @@ use DBI;
 use Data::Dumper;
 use Encode qw/from_to/;
 use Time::HiRes qw/time/;
+use Getopt::Long;
 
 =head1 NAME
 
@@ -22,16 +23,22 @@ my $c = {
 	pk_col => '_id',
 	db_encoding => 'iso-8859-2',
 	debug => 0,
+	user => 'admin',
+	passwd => 'admin',
 };
+
+GetOptions($c, qw/node_url=s sql=s pk_col=s eb_encoding=s debug+ user=s passwd=s/);
+
+warn "# c: ", Dumper($c) if ($c->{debug});
 
 # create and configure node
 my $node = new Search::Estraier::Node(
 	url => $c->{node_url},
-	user => 'admin',
-	passwd => 'admin',
+	user => $c->{user},
+	passwd => $c->{passwd},
 	croak_on_error => 1,
 	create => 1,
-	debug => $c->{debug},
+	debug => $c->{debug} >= 4 ? 1 : 0,
 );
 
 # create DBI connection
@@ -50,7 +57,7 @@ my $pk_col = $c->{pk_col} || 'id';
 
 while (my $row = $sth->fetchrow_hashref() ) {
 
-	warn "# row: ",Dumper($row) if ($c->{debug});
+	warn "# row: ",Dumper($row) if ($c->{debug} >= 3);
 
 	# create document
 	my $doc = new Search::Estraier::Document;
@@ -82,7 +89,7 @@ while (my $row = $sth->fetchrow_hashref() ) {
 
 	}
 
-	warn "# doc draft: ",$doc->dump_draft, "\n" if ($c->{debug});
+	warn "# doc draft: ",$doc->dump_draft, "\n" if ($c->{debug} >= 2);
 
 	die "error: ", $node->status,"\n" unless (eval { $node->put_doc($doc) });
 

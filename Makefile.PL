@@ -39,5 +39,19 @@ changelog:
 tags:
 	ctags *.p?
 
+cpan:
+	make clean
+	rm -f Search-Estraier-*.tar.gz
+	perl Makefile.PL
+	make changelog
+	make dist
+	make disttest
+	sudo /etc/init.d/hyperestraier stop
+	make disttest
+	sudo /etc/init.d/hyperestraier start
+	@echo
+	@echo -n "Upload" Search-Estraier-*.tar.gz "to CPAN? [y/N]:"
+	@read upload && test "$$upload" == "y" && cpan-upload -verbose Search-Estraier-*.tar.gz
+
 MAKE_MORE
 }

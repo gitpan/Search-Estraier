@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.07_1';
+our $VERSION = '0.07_2';
 
 =head1 NAME
 
@@ -1741,6 +1741,31 @@ sub links {
 	my $self = shift;
 	$self->_set_info unless ($self->{inform}->{name});
 	return $self->{inform}->{links};
+}
+
+=head2 cacheusage
+
+Return cache usage for a node
+
+  my $cache = $node->cacheusage;
+
+=cut
+
+sub cacheusage {
+	my $self = shift;
+
+	return unless ($self->{url});
+
+	my $resbody;
+	my $rv = $self->shuttle_url( $self->{url} . '/cacheusage',
+		'text/plain',
+		undef,
+		\$resbody,
+	);
+
+	return if ($rv != 200 || !$resbody);
+
+	return $resbody;
 }
 
 =head2 master

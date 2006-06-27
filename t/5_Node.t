@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-my $tests = 270;
+my $tests = 271;
 
 use Test::More;
 use Test::Exception;
@@ -170,6 +170,9 @@ ok( $node->out_doc( $id ), "out_doc($id)");
 cmp_ok( $node->doc_num, '==', --$doc_num, "node->doc_num " . $doc_num);
 
 ok( ! $node->edit_doc( $doc ), "edit_doc of removed doc");
+
+my $cache;
+ok($cache = $node->cacheusage, "cacheusage: $cache");
 
 my $delete_num = 5;
 
