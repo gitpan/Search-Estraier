@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 31;
+use Test::More tests => 32;
 use Test::Exception;
 #use Data::Dumper;
 
@@ -36,6 +36,8 @@ cmp_ok($cond->set_options(@all_options), '==', $all_opts, "set_option all!");
 throws_ok { $cond->set_options('foo') } qr/foo/, "set_option invalid";
 
 cmp_ok($cond->set_options( SURE => 1 ), '==', $cond->set_options('SURE'), "set_option backward compatibility");
+
+ok($cond->set_mask(qw/0 1 2/), 'mask');
 
 my $v;
 cmp_ok($v = $cond->phrase, 'eq', 'search', "phrase: $v");

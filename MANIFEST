@@ -15,4 +15,5 @@ t/2_Condition.t
 t/3_ResultDocument.t
 t/4_NodeResult.t
 t/5_Node.t
-t/99_pod.t
+t/9_pod-coverage.t
+t/9_pod.t

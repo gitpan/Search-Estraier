@@ -867,8 +867,12 @@ sub new {
 
 	$self->{'iso2utf'} = Text::Iconv->new('ISO-8859-1','UTF-8');
 
-	my $node = Search::Estraier::Node->new($self->{'uri'});
-	$node->set_auth('admin', 'admin');
+	my $node = Search::Estraier::Node->new(
+		url => $self->{'uri'},
+		user => 'admin',
+		passwd => 'admin',
+		create => 1,
+	);
 
 	$self->{'node'} = $node;
 

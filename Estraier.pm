@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.07_2';
+our $VERSION = '0.07';
 
 =head1 NAME
 
@@ -120,9 +120,34 @@ our @ISA = qw/Search::Estraier/;
 
 =head1 Search::Estraier::Document
 
-This class implements Document which is collection of attributes
-(key=value), vectors (also key value) display text and hidden text.
+This class implements Document which is single item in Hyper Estraier.
 
+It's is collection of:
+
+=over 4
+
+=item attributes
+
+C<< 'key' => 'value' >> pairs which can later be used for filtering of results
+
+You can add common filters to C<attrindex> in estmaster's C<_conf>
+file for better performance. See C<attrindex> in
+L<Hyper Estraier P2P Guide|http://hyperestraier.sourceforge.net/nguide-en.html>.
+
+=item vectors
+
+also C<< 'key' => 'value' >> pairs
+
+=item display text
+
+Text which will be used to create searchable corpus of your index and
+included in snippet output.
+
+=item hidden text
+
+Text which will be searchable, but will not be included in snippet.
+
+=back
 
 =head2 new
 
@@ -157,9 +182,10 @@ sub new {
 
 			if ($line =~ m/^%VECTOR\t(.+)$/) {
 				my @fields = split(/\t/, $1);
-				for my $i ( 0 .. ($#fields - 1) ) {
-					$self->{kwords}->{ $fields[ $i ] } = $fields[ $i + 1 ];
-					$i++;
+				if ($#fields % 2 == 1) {
+					$self->{kwords} = { @fields };
+				} else {
+					warn "can't decode $line\n";
 				}
 				next;
 			} elsif ($line =~ m/^%/) {
@@ -241,6 +267,27 @@ sub add_hidden_text {
 	return unless defined($text);
 
 	push @{ $self->{htexts} }, $self->_s($text);
+}
+
+=head2 add_vectors
+
+Add a vectors
+
+  $doc->add_vector(
+  	'vector_name' => 42,
+	'another' => 12345,
+  );
+
+=cut
+
+sub add_vectors {
+	my $self = shift;
+	return unless (@_);
+
+	# this is ugly, but works
+	die "add_vector needs HASH as argument" unless ($#_ % 2 == 1);
+
+	$self->{kwords} = {@_};
 }
 
 
@@ -337,7 +384,7 @@ sub dump_draft {
 	}
 
 	if ($self->{kwords}) {
-		$draft .= '%%VECTOR';
+		$draft .= '%VECTOR';
 		while (my ($key, $value) = each %{ $self->{kwords} }) {
 			$draft .= "\t$key\t$value";
 		}
@@ -628,6 +675,22 @@ Return skip for this condition.
 sub skip {
 	my $self = shift;
 	return $self->{skip};
+}
+
+=head2 set_mask
+
+Filter out some links when searching.
+
+Argument array of link numbers, starting with 0 (current node).
+
+  $cond->set_mask(qw/0 1 4/);
+
+=cut
+
+sub set_mask {
+	my $self = shift;
+	return unless (@_);
+	$self->{mask} = \@_;
 }
 
 
@@ -1306,7 +1369,7 @@ sub _fetch_doc {
 	$path = '/etch_doc' if ($a->{etch});
 
 	if ($a->{id}) {
-		croak "id must be numberm not '$a->{id}'" unless ($a->{id} =~ m/^\d+$/);
+		croak "id must be number not '$a->{id}'" unless ($a->{id} =~ m/^\d+$/);
 		$arg = 'id=' . $a->{id};
 	} elsif ($a->{uri}) {
 		$arg = 'uri=' . uri_escape($a->{uri});
@@ -1516,6 +1579,13 @@ sub cond_to_query {
 	push @args, 'hwidth=' . $self->{hwidth};
 	push @args, 'awidth=' . $self->{awidth};
 	push @args, 'skip=' . $cond->{skip} if ($cond->{skip});
+
+	if ($cond->{mask}) {
+		my $mask = 0;
+		map { $mask += ( 2 ** $_ ) } @{ $cond->{mask} };
+
+		push @args, 'mask=' . $mask if ($mask);
+	}
 
 	return join('&', @args);
 }
@@ -1986,6 +2056,10 @@ Nothing.
 L<http://hyperestraier.sourceforge.net/>
 
 Hyper Estraier Ruby interface on which this module is based.
+
+Hyper Estraier now also has pure-perl binding included in distribution. It's
+a faster way to access databases directly if you are not running
+C<estmaster> P2P server.
 
 =head1 AUTHOR
 

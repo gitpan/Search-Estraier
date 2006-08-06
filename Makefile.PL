@@ -53,5 +53,10 @@ cpan:
 	@echo -n "Upload" Search-Estraier-*.tar.gz "to CPAN? [y/N]:"
 	@read upload && test "$$upload" == "y" && cpan-upload -verbose Search-Estraier-*.tar.gz
 
+cover:
+	cover -delete
+	HARNESS_PERL_SWITCHES=-MDevel::Cover make test
+	cover
+
 MAKE_MORE
 }

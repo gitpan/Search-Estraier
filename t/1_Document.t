@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 54;
+use Test::More tests => 55;
 use Test::Exception;
 use Data::Dumper;
 
@@ -13,6 +13,7 @@ BEGIN { use_ok('Search::Estraier') };
 
 #cmp_ok(Search::Estraier::Document::_s("  this  is a  text  "), 'eq', 'this is a text', '_s - strip spaces');
 
+my $debug = shift @ARGV;
 
 my $attr_data = {
 	'@uri' => 'http://localhost/Search-Estraier/',
@@ -27,6 +28,12 @@ my @test_texts = (
 	'of pure-perl bindings',
 	'for HyperEstraier'
 );
+
+my $vectors = {
+	'foo' => 42,
+	'bar' => 100,
+	'baz' => 0,
+};
 
 ok(my $doc = new Search::Estraier::Document, 'new');
 
@@ -51,6 +58,10 @@ foreach my $t (@test_texts) {
 
 ok($doc->add_hidden_text('This is hidden text'), 'add_hidden_text');
 
+ok($doc->add_vectors( %{ $vectors } ), 'add_vectors');
+
+diag "current doc: ", Dumper($doc) if ($debug);
+
 ok(my @texts = $doc->texts, 'texts');
 
 ok(my $draft = $doc->dump_draft, 'dump_draft');
@@ -60,16 +71,17 @@ foreach my $a (keys %{$attr_data}) {
 	like($draft, qr/$regex/, "draft has $regex");
 }
 
-#diag "dump_draft:\n$draft";
+diag "dump_draft:\n$draft" if ($debug);
 
 ok(my $doc2 = new Search::Estraier::Document($draft), 'new from draft');
+diag "doc from draft: ", Dumper($doc2) if ($debug);
 cmp_ok($doc2->dump_draft, 'eq', $draft, 'drafts same');
 
 cmp_ok($doc->id, '==', -1, 'id');
 cmp_ok($doc2->id, '==', -1, 'id');
 
 ok(my @attr = $doc->attr_names, 'attr_names');
-#diag "attr_names: ", join(',',@attr), "\n";
+diag "attr_names: ", join(',',@attr), "\n" if ($debug);
 
 cmp_ok(scalar @attr, '==', keys %{$attr_data}, 'attr_names');
 
@@ -81,14 +93,14 @@ foreach my $a (keys %{$attr_data}) {
 }
 
 @attr = $doc->attr_names;
-#diag "attr_names left: ", join(',',$doc->attr_names), "\n";
+diag "attr_names left: ", join(',',$doc->attr_names), "\n" if ($debug);
 cmp_ok(@attr, '==' , 0, "attributes removed");
 
-#diag "texts: ", join(',',@texts), "\n";
+diag "texts: ", join(',',@texts), "\n" if ($debug);
 ok(eq_array(\@test_texts, \@texts), 'texts');
 
 ok(my $cat_text = $doc->cat_texts, 'cat_text');
-#diag "cat_texts: $cat_text";
+diag "cat_texts: $cat_text" if ($debug);
 
 ok($doc = new Search::Estraier::Document, 'new empty');
 ok(! $doc->texts, 'texts');
@@ -98,4 +110,3 @@ ok(! $doc->attr_names, 'attr_names');
 ok(! $doc->attr(undef), 'attr');
 ok(! $doc->cat_texts, 'cat_texts');
 
-#diag Dumper($doc);

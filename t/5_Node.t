@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-my $tests = 271;
+my $tests = 280;
 
 use Test::More;
 use Test::Exception;
@@ -157,6 +157,8 @@ ok(! $node->uri_to_id( 'does-not-exists' ), "non-existant uri_to_id");
 my $id;
 ok($id = $node->uri_to_id( 'data0' ), "uri_to_id(data0)");
 
+throws_ok { $node->get_doc( 'foo') } qr/id must be number/, 'croak on non-number';
+
 ok($doc = $node->get_doc( $id ), "get_doc($id) for edit");
 $doc->add_attr('foo', 'bar');
 #diag Dumper($doc);
@@ -191,8 +193,9 @@ ok($cond->set_phrase('girl'), 'cond set_phrase');
 ok($cond->set_max($max), "cond set_max($max)");
 ok($cond->set_order('@uri ASCD'), 'cond set_order');
 ok($cond->add_attr('@title STRINC Material'), 'cond add_attr');
+ok($cond->set_mask(qw/1 2/), 'cond set_mask');
 
-cmp_ok($node->cond_to_query( $cond ), 'eq' , 'phrase=girl&attr1=%40title%20STRINC%20Material&order=%40uri%20ASCD&max='.$max.'&wwidth=480&hwidth=96&awidth=96', 'cond_to_query');
+cmp_ok($node->cond_to_query( $cond ), 'eq' , 'phrase=girl&attr1=%40title%20STRINC%20Material&order=%40uri%20ASCD&max='.$max.'&wwidth=480&hwidth=96&awidth=96&mask=6', 'cond_to_query');
 
 ok( my $nres = $node->search( $cond, 0 ), 'search');
 
@@ -232,6 +235,9 @@ for my $i ( 0 .. ($nres->hits - 1) ) {
 
 ok(my $hints = $nres->hints, 'hints');
 diag Dumper($hints) if ($debug);
+foreach my $h (qw/TIME DOCNUM VERSION NODE HIT WORDNUM/) {
+	ok(defined( $nres->hint($h) ), "have hint $h");
+}
 
 ok($node->_set_info, "refresh _set_info");
 
@@ -247,6 +253,7 @@ ok($node->set_snippet_width( 100, 10, 10 ), "set_snippet_width");
 # test skip
 my $skip = int($max / 2) || die "skip is zero, can't test";
 ok($cond->set_skip( $skip ), "cond set_skip($skip)");
+cmp_ok($cond->skip, '==', $skip, "skip is $skip");
 
 like($node->cond_to_query( $cond ), qr/skip=$skip/, 'cond_to_query have skip');
 
