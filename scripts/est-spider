@@ -8,6 +8,8 @@ use Text::Iconv;
 #use File::MMagic;
 use File::MMagic::XS qw/:compat/;
 use Time::HiRes qw/time/;
+use HTML::TreeBuilder;
+use Data::Dump qw/dump/;
 
 my $collection;		# name which will be inserted
 my $path_add;		# add additional info in path
@@ -59,7 +61,7 @@ my $start_t = time();
 my $filter;
 foreach my $f (qw/pdftotext pstotext/) {
 	my $w = which($f);
-	if ($f) {
+	if ($w) {
 		$filter->{$f} = $w;
 		print STDERR "using $f filter at $w\n" if ($verbose);
 	}
@@ -78,7 +80,102 @@ my $db = new Search::Estraier::Node(
 	user => 'admin',
 	passwd => 'admin',
 	croak_on_error => 1,
+	create => 1,
 );
+
+#
+# check if hhc file exists, and if it does, extract information from it
+#
+
+my $hhc_file;
+# try to find hhc
+find({ wanted => sub {
+		return unless( m!\.hhc$!i );
+		$hhc_file = $_;
+		warn "using $hhc_file for tree structure\n";
+	},
+	follow => 1,
+	follow_skip => 2,
+	no_chdir => 1,
+}, $dir);
+
+my $meta;
+
+if ($hhc_file) {
+
+	sub param {
+		my ($el) = @_;
+
+		my $n;
+		foreach my $p ( $el->find('param') ) {
+			$n->{ $p->attr('name') } = $p->attr('value');
+		}
+
+		if ( ! defined($n->{Local}) ) {
+			warn "### skipped = ",dump($n),$/;
+			return;
+		}
+
+		my $path = $dir . '/' . $n->{Local};
+		$path =~ s!//!/!g;
+		$path = lc($path);
+
+		$n->{path} = $path;
+
+		my $nr = $n->{ImageNumber} || next;
+
+		if ($nr == 27) {
+			$meta->{title} = $n->{Name};
+			$meta->{index_path} = $path;
+		} elsif ($nr == 21) {
+			$meta->{toc_path} = $path;
+		} elsif ($nr == 1) {
+			$meta->{foreword_path} = $path;
+		} elsif ($nr == 11) {
+			# nop
+		} else {
+			warn "unknown ImageNumber: $nr\n";
+		}
+
+		return $n;
+	}
+
+	my $tree = HTML::TreeBuilder->new;
+	$tree->parse_file($hhc_file);
+
+	my $prefix = $collection ? ( $collection . ' :: ' ) : '';
+
+	my @prefix;
+	my $depth = 0;
+
+	foreach my $e ( $tree->look_down( sub { $_[0]->tag =~ m/(object)/ } ) ) {
+
+#		printf("%05s %s\n", $e->parent->address(), $e->as_HTML() );
+
+		my $l = ($e->depth() / 2) - 1;
+
+		$prefix[ 0 ] = $meta->{title} || '';
+
+		my $n = param($e);
+		$prefix[ $l ] = $n->{Name};
+
+		next unless ($n->{path});
+
+		my $t = '';
+		my @p;
+		foreach my $i ( 0 .. $l ) {
+			push @p, $prefix[ $i ] if ($prefix[ $i ]);
+		}
+		$t = join(' :: ', @p ) if (@p);
+
+		$meta->{path2title}->{ $n->{path} } = $t;
+
+	}
+
+	$tree->delete;
+
+}
+
 
 find({ wanted => \&file, 
 	follow => 1,
@@ -88,6 +185,11 @@ find({ wanted => \&file,
 
 my $dur = (time() - $start_t) || 1;
 printf STDERR "%d documents in %.2fs [%.2f docs/s]\n", $docs, $dur, ($docs / $dur);
+
+$db->master(
+	action => 'sync'
+);
+
 
 exit;
 
@@ -111,12 +213,21 @@ sub dump_contents {
 	# create a document object 
 	my $doc = new Search::Estraier::Document;
 
-	my $title = $1 if ($contents =~ m#<title>(.+?)</title>#is);
+	my $title;
 
-	# chop long titles to 100 chars
-	$title = substr($title, 0, 100) . '...' if ($title && length($title) > 100);
-	# use path if no title is found
-	$title ||= $path;
+	if ( defined($meta->{path2title}->{lc($path)}) ) {
+		$title = $meta->{path2title}->{lc($path)};
+		warn " $title\n";
+	} else {
+
+		$title = $1 if ($contents =~ m#<title>(.+?)</title>#is);
+
+		# chop long titles to 100 chars
+		$title = substr($title, 0, 100) . '...' if ($title && length($title) > 100);
+		# use path if no title is found
+		$title ||= $path;
+	
+	}
 
 	# add attributes to the document object 
 	$doc->add_attr('@uri', "file:///$path");
@@ -126,6 +237,7 @@ sub dump_contents {
 
 	if ($contents) {
 		# html2text
+		$contents =~ s#<script.*?</script>##gis;
 		$contents =~ s#<[^>]+/*>##gs;
 		$contents =~ s#\s\s+# #gs;
 
@@ -198,7 +310,8 @@ sub file {
 	return if (! $all && -d $path);
 
 	my $mtime = (stat($path))[9] || -1;
-	my $mtime_db = eval { $db->get_doc_attr_by_uri("file:///$path", '@mtime') };
+	my $mtime_db;
+	eval { $db->get_doc_attr_by_uri("file:///$path", '@mtime') } unless ($force);
 	$mtime_db ||= -2;
 
 	if ($mtime == $mtime_db) {

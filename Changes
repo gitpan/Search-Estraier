@@ -1,4 +1,47 @@
 ----------------------------------------------------------------------
+r184:  dpavlin | 2006-11-04 14:10:29 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+set_distinct and set_score patch from Mikio Hirabayashi <mikio@users.sourceforge.net>
+----------------------------------------------------------------------
+r183:  dpavlin | 2006-08-31 16:43:06 +0200
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+separate authorisation for estraier (estuser,estpasswd) and database (dbuser,dbpasswd)
+
+----------------------------------------------------------------------
+r182:  dpavlin | 2006-08-27 00:35:15 +0200
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+--force will now skip checking of mtime (as it should)
+----------------------------------------------------------------------
+r181:  dpavlin | 2006-08-27 00:33:34 +0200
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+remove script from html when convertin it to text
+----------------------------------------------------------------------
+r180:  dpavlin | 2006-08-27 00:30:13 +0200
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+fix deletection of external binaries
+----------------------------------------------------------------------
+r179:  dpavlin | 2006-08-25 13:59:04 +0200
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+parse windows help file index (hhc) if available for page titles
+----------------------------------------------------------------------
+r178:  dpavlin | 2006-08-15 18:38:06 +0200
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+sync master at end of indexing
+----------------------------------------------------------------------
 r176:  dpavlin | 2006-08-06 20:43:58 +0200
 Changed paths:
   M  /trunk/Estraier.pm

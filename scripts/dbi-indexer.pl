@@ -27,22 +27,22 @@ my $c = {
 	passwd => 'admin',
 };
 
-GetOptions($c, qw/node_url=s sql=s pk_col=s eb_encoding=s debug+ user=s passwd=s/);
+GetOptions($c, qw/node_url=s sql=s pk_col=s eb_encoding=s debug+ estuser=s estpasswd=s dbuser=s dbpasswd=s/);
 
 warn "# c: ", Dumper($c) if ($c->{debug});
 
 # create and configure node
 my $node = new Search::Estraier::Node(
 	url => $c->{node_url},
-	user => $c->{user},
-	passwd => $c->{passwd},
+	user => $c->{estuser},
+	passwd => $c->{estpasswd},
 	croak_on_error => 1,
 	create => 1,
 	debug => $c->{debug} >= 4 ? 1 : 0,
 );
 
 # create DBI connection
-my $dbh = DBI->connect("DBI:$c->{dbi}","","") || die $DBI::errstr;
+my $dbh = DBI->connect("DBI:$c->{dbi}", $c->{dbuser}, $c->{dbpasswd}) || die $DBI::errstr;
 
 my $sth = $dbh->prepare($c->{sql}) || die $dbh->errstr();
 $sth->execute() || die $sth->errstr();

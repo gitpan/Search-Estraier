@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08_1';
 
 =head1 NAME
 
@@ -188,6 +188,9 @@ sub new {
 					warn "can't decode $line\n";
 				}
 				next;
+			} elsif ($line =~ m/^%SCORE\t(.+)$/) {
+			    $self->{score} = $1;
+			    next;
 			} elsif ($line =~ m/^%/) {
 				# What is this? comment?
 				#warn "$line\n";
@@ -290,6 +293,32 @@ sub add_vectors {
 	$self->{kwords} = {@_};
 }
 
+=head2 set_score
+
+Set the substitute score
+
+  $doc->set_score(12345);
+
+=cut
+
+sub set_score {
+    my $self = shift;
+    my $score = shift;
+    return unless (defined($score));
+    $self->{score} = $score;
+}
+
+=head2 score
+
+Get the substitute score
+
+=cut
+
+sub score {
+    my $self = shift;
+    return -1 unless (defined($self->{score}));
+    return $self->{score};
+}
 
 =head2 id
 
@@ -391,10 +420,16 @@ sub dump_draft {
 		$draft .= "\n";
 	}
 
+	if (defined($self->{score}) && $self->{score} >= 0) {
+	    $draft .= "%SCORE\t" . $self->{score} . "\n";
+	}
+
 	$draft .= "\n";
 
 	$draft .= join("\n", @{ $self->{dtexts} }) . "\n" if ($self->{dtexts});
 	$draft .= "\t" . join("\n\t", @{ $self->{htexts} }) . "\n" if ($self->{htexts});
+
+	printf("[%s]\n", $draft);
 
 	return $draft;
 }
@@ -675,6 +710,31 @@ Return skip for this condition.
 sub skip {
 	my $self = shift;
 	return $self->{skip};
+}
+
+
+=head2 set_distinct
+
+  $cond->set_distinct('@author');
+
+=cut
+
+sub set_distinct {
+	my $self = shift;
+	$self->{distinct} = shift;
+}
+
+=head2 distinct
+
+Return distinct attribute
+
+  print $cond->distinct;
+
+=cut
+
+sub distinct {
+	my $self = shift;
+	return $self->{distinct};
 }
 
 =head2 set_mask
@@ -1579,6 +1639,10 @@ sub cond_to_query {
 	push @args, 'hwidth=' . $self->{hwidth};
 	push @args, 'awidth=' . $self->{awidth};
 	push @args, 'skip=' . $cond->{skip} if ($cond->{skip});
+
+	if (my $distinct = $cond->distinct) {
+		push @args, 'distinct=' . uri_escape($distinct);
+	}
 
 	if ($cond->{mask}) {
 		my $mask = 0;
