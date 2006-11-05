@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '0.08_1';
+our $VERSION = '0.08';
 
 =head1 NAME
 
@@ -428,8 +428,6 @@ sub dump_draft {
 
 	$draft .= join("\n", @{ $self->{dtexts} }) . "\n" if ($self->{dtexts});
 	$draft .= "\t" . join("\n\t", @{ $self->{htexts} }) . "\n" if ($self->{htexts});
-
-	printf("[%s]\n", $draft);
 
 	return $draft;
 }

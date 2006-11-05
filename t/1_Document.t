@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 55;
+use Test::More tests => 60;
 use Test::Exception;
 use Data::Dumper;
 
@@ -109,4 +109,10 @@ cmp_ok($doc->id, '==', -1, 'id');
 ok(! $doc->attr_names, 'attr_names');
 ok(! $doc->attr(undef), 'attr');
 ok(! $doc->cat_texts, 'cat_texts');
+
+ok($doc = new Search::Estraier::Document, 'new empty');
+cmp_ok($doc->score, '==', -1, 'no score');
+ok($doc->set_score(12345), 'set_score');
+cmp_ok($doc->score, '==', 12345, 'score');
+like($doc->dump_draft, qr/%SCORE\s+12345/, 'dump_draft has %SCORE');
 

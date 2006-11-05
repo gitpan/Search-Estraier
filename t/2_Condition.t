@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-use Test::More tests => 32;
+use Test::More tests => 34;
 use Test::Exception;
 #use Data::Dumper;
 
@@ -49,3 +49,6 @@ cmp_ok($cond->attrs, '==', 1, 'one attrs');
 ok($cond->add_attr('@foo2 BAR2 baz2'), 'set_attr');
 #diag "attrs: ",join(",",$cond->attrs);
 cmp_ok($cond->attrs, '==', 2, 'two attrs');
+
+ok($cond->set_distinct('@foo'), 'set_distinct');
+cmp_ok($cond->distinct, 'eq', '@foo', 'distinct');

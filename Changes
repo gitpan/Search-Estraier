@@ -1,4 +1,52 @@
 ----------------------------------------------------------------------
+r192:  dpavlin | 2006-11-05 17:28:31 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix warning
+----------------------------------------------------------------------
+r191:  dpavlin | 2006-11-05 17:26:57 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+bump version to 0.08
+----------------------------------------------------------------------
+r190:  dpavlin | 2006-11-05 17:25:56 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+actually wrap $cond->set_distinct in ok() :-)
+----------------------------------------------------------------------
+r189:  dpavlin | 2006-11-05 17:23:03 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+test set_distinct
+----------------------------------------------------------------------
+r188:  dpavlin | 2006-11-05 17:08:08 +0100
+Changed paths:
+  M  /trunk/t/2_Condition.t
+
+added tests for set_distinct and distinct
+----------------------------------------------------------------------
+r187:  dpavlin | 2006-11-05 17:01:36 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+added tests for set_score and score
+----------------------------------------------------------------------
+r186:  dpavlin | 2006-11-05 16:53:13 +0100
+Changed paths:
+  M  /trunk/Estraier.pm
+
+removed debugging output
+----------------------------------------------------------------------
+r185:  dpavlin | 2006-11-05 16:53:01 +0100
+Changed paths:
+  M  /trunk/t/1_Document.t
+
+add tests for set_score and score
+----------------------------------------------------------------------
 r184:  dpavlin | 2006-11-04 14:10:29 +0100
 Changed paths:
   M  /trunk/Estraier.pm

@@ -3,7 +3,7 @@
 use strict;
 use blib;
 
-my $tests = 280;
+my $tests = 312;
 
 use Test::More;
 use Test::Exception;
@@ -147,6 +147,7 @@ ok( $node->put_doc($doc), "put_doc data001");
 
 for ( 1 .. 17 ) {
 	$doc->add_attr('@uri', 'test' . $_);
+	$doc->set_score( $_ * 10000 );
 	ok( $node->put_doc($doc), "put_doc test$_");
 	#diag $doc->dump_draft;
 	cmp_ok( $node->doc_num, '==', ($_ + 1), "node->doc_num " . ($_ + 1));
@@ -223,8 +224,12 @@ for my $i ( 0 .. ($nres->hits - 1) ) {
 	}
 
 	ok( my $id = $node->uri_to_id( $uri ), "uri_to_id($uri)");
-	ok( $node->get_doc( $id ), "get_doc($id)");
-	ok( $node->get_doc_by_uri( $uri ), "get_doc_by_uri($uri)");
+	my $doc;
+	my $score = $num * 10000;
+	ok( $doc = $node->get_doc( $id ), "get_doc($id)");
+	cmp_ok( $doc->score, '==', $score, "score $score");
+	ok( $doc = $node->get_doc_by_uri( $uri ), "get_doc_by_uri($uri)");
+	cmp_ok( $doc->score, '==', $score, "score $score");
 	cmp_ok( $node->get_doc_attr( $id, '@uri' ), 'eq', $uri, "get_doc_attr $id");
 	cmp_ok( $node->get_doc_attr_by_uri( $uri, '@uri' ), 'eq', $uri, "get_doc_attr $id");
 	ok( my $k1 = $node->etch_doc( $id ), "etch_doc_by_uri $uri");
@@ -272,6 +277,17 @@ for my $i ( 0 .. ($nres->doc_num - 1) ) {
 	}
 }
 
+# test distinct
+ok($cond = new Search::Estraier::Condition, 'new cond');
+ok($cond->set_phrase('girl'), 'cond set_phrase');
+my $distinct = '@title';
+ok($cond->set_distinct( $distinct ), "cond set_distinct($distinct)");
+cmp_ok($cond->distinct, 'eq', $distinct, "distinct is $distinct");
+like($node->cond_to_query( $cond ), qr/distinct=%40title/, 'cond_to_query have distinct');
+ok( $nres = $node->search( $cond, 0 ), 'search with distinct');
+cmp_ok($nres->doc_num, '==', 1, "nres->doc_num");
+cmp_ok($nres->hits, '==', 1, "nres->hits");
+diag "nres = ", Dumper( $nres ) if ($debug);
 
 # user doesn't exist
 ok($node->set_user('foobar', 1), 'set_user');
