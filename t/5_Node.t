@@ -3,15 +3,14 @@
 use strict;
 use blib;
 
-my $tests = 312;
-
 use Test::More;
 use Test::Exception;
 use Data::Dumper;
 
-BEGIN { use_ok('Search::Estraier') };
-
-plan tests => $tests;
+BEGIN {
+	plan tests => 313;
+	use_ok('Search::Estraier');
+};
 
 my $debug = shift @ARGV;
 
@@ -45,7 +44,7 @@ cmp_ok($node->status, '==', -1, 'status');
 
 SKIP: {
 
-skip "can't find estmaster at $estmaster_uri", ($tests - 9) if (! eval { $node->master( action => 'nodelist' ) } );
+skip "can't find estmaster at $estmaster_uri", ( 313 - 10 ) if (! eval { $node->master( action => 'nodelist' ) } );
 
 diag "using $estmaster_uri";
 diag("node->master shutdown not tested");

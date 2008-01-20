@@ -15,19 +15,21 @@ dbi-indexer.pl - example indexer of DBI sources for Search::Estraier
 =cut
 
 my $c = {
-	node_url => 'http://localhost:1978/node/dbi',
-	dbi => 'Pg:dbname=azop',
+	node_url => 'http://localhost:1978/node/dbi-template1',
+	dbi => 'Pg:dbname=template1',
+	dbuser => 'postgres',
 	sql => qq{
-		select * from history_collection_view_cache
+		select * from pg_database
 	},
-	pk_col => '_id',
+	pk_col => 'datname',
 	db_encoding => 'iso-8859-2',
 	debug => 0,
-	user => 'admin',
-	passwd => 'admin',
+	estuser => 'admin',
+	estpasswd => 'admin',
+	quiet => 0,
 };
 
-GetOptions($c, qw/node_url=s sql=s pk_col=s eb_encoding=s debug+ estuser=s estpasswd=s dbuser=s dbpasswd=s/);
+GetOptions($c, qw/node_url=s dbi=s sql=s pk_col=s eb_encoding=s debug+ quiet+ estuser=s estpasswd=s dbuser=s dbpasswd=s/);
 
 warn "# c: ", Dumper($c) if ($c->{debug});
 
@@ -68,7 +70,8 @@ while (my $row = $sth->fetchrow_hashref() ) {
 		die "can't find pk_col column '$pk_col' in results\n";
 	}
 
-	printf "%4d ",$i;
+	my $out = '';
+	$out .= sprintf("%4d ",$i);
 
 	while (my ($col,$val) = each %{$row}) {
 
@@ -82,9 +85,9 @@ while (my $row = $sth->fetchrow_hashref() ) {
 			# add body text to document (make it searchable using full-text index)
 			$doc->add_text($val);
 
-			print "R";
+			$out .= "R";
 		} else {
-			print ".";
+			$out .= ".";
 		}
 
 	}
@@ -93,6 +96,6 @@ while (my $row = $sth->fetchrow_hashref() ) {
 
 	die "error: ", $node->status,"\n" unless (eval { $node->put_doc($doc) });
 
-	printf (" %d%% %.1f/s\n", int(( $i++ / $total) * 100), ( $i / (time() - $t) ) );
+	printf ("%s %d%% %.1f/s\n", $out, int(( $i++ / $total) * 100), ( $i / (time() - $t) ) ) unless ($c->{quiet});
 
 }

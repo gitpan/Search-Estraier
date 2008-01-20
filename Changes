@@ -1,4 +1,46 @@
 ----------------------------------------------------------------------
+r199:  dpavlin | 2008-01-20 17:51:47 +0100
+Changed paths:
+  M  /trunk/lib/Search/Estraier.pm
+
+version bump [0.09]
+----------------------------------------------------------------------
+r198:  dpavlin | 2008-01-20 17:50:59 +0100
+Changed paths:
+  M  /trunk/t/5_Node.t
+
+fix RT #32457: Victim of Test-Simple 0.74
+----------------------------------------------------------------------
+r197:  dpavlin | 2007-01-05 23:19:01 +0100
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+don't exit from sub with next
+----------------------------------------------------------------------
+r196:  dpavlin | 2006-11-26 13:06:08 +0100
+Changed paths:
+  M  /trunk/scripts/est-spider
+
+added --skip-images option
+----------------------------------------------------------------------
+r195:  dpavlin | 2006-11-14 17:39:08 +0100
+Changed paths:
+  M  /trunk/scripts/dbi-indexer.pl
+
+added new --dbi and --quiet command-line options, saner defaults
+
+----------------------------------------------------------------------
+r194:  dpavlin | 2006-11-12 00:34:55 +0100
+Changed paths:
+  D  /trunk/Estraier.pm
+  M  /trunk/MANIFEST
+  M  /trunk/Makefile.PL
+  A  /trunk/lib
+  A  /trunk/lib/Search
+  A  /trunk/lib/Search/Estraier.pm (from /trunk/Estraier.pm:191)
+
+reorg directory structure to lib/Search/Estraier.pm
+----------------------------------------------------------------------
 r192:  dpavlin | 2006-11-05 17:28:31 +0100
 Changed paths:
   M  /trunk/t/5_Node.t

@@ -6,7 +6,7 @@ use ExtUtils::MakeMaker;
 # now write Makefile
 WriteMakefile(
     NAME              => 'Search::Estraier',
-    VERSION_FROM      => 'Estraier.pm', # finds $VERSION
+    VERSION_FROM      => 'lib/Search/Estraier.pm', # finds $VERSION
     PREREQ_PM         => {
 		'Carp' => 0,
 		'Test::Simple' => 0,
@@ -17,7 +17,7 @@ WriteMakefile(
 		'URI::Escape' => 0,
     }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'Estraier.pm', # retrieve abstract from module
+      (ABSTRACT_FROM  => 'lib/Search/Estraier.pm', # retrieve abstract from module
        AUTHOR         => 'Dobrica Pavlinusic <dpavlin@rot13.org>') : ()),
        clean	=> { FILES => "Makefile Makefile.old pod2html" },
 );

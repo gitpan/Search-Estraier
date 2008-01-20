@@ -20,6 +20,7 @@ my $exclude;
 my $debug = 0;
 my $force = 0;
 my $all = 0;
+my $skip_images = 0;
 
 my $result = GetOptions(
 	"collection=s" => \$collection,
@@ -29,6 +30,7 @@ my $result = GetOptions(
 	"exclude=s" => \$exclude,
 	"force!" => \$force,
 	"all!" => \$all,
+	"skip-images!" => \$skip_images,
 );
 
 my ($node_url,$dir) = @ARGV;
@@ -40,6 +42,7 @@ options:
 	--collection="name of collection"
 	--path=/path/to/add/at/end
 	--exclude=regex_to_exclude
+	--skip-images
 	--verbose
 	--force
 	--debug
@@ -122,7 +125,7 @@ if ($hhc_file) {
 
 		$n->{path} = $path;
 
-		my $nr = $n->{ImageNumber} || next;
+		my $nr = $n->{ImageNumber} || return $n;
 
 		if ($nr == 27) {
 			$meta->{title} = $n->{Name};
@@ -346,6 +349,9 @@ sub file {
 			warn "skipping '$path', no pstotext filter\n" if ($verbose);
 			return;
 		}
+	} elsif ($type =~ m!^image/! && $skip_images) {
+		warn "skipping image '$path'\n" if ($verbose);
+		return;	# don't index images
 	} else {
 
 #		return if (! -f $path || ! m/\.(html*|php|pl|txt|info|log|text)$/i);
